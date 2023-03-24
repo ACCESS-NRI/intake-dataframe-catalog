@@ -240,6 +240,25 @@ class DFFileCatalog(Catalog):
 
         super().__init__(**intake_kwargs)
 
+    def _load(self):
+        """
+        Load the DF catalog from file.
+        """
+        self.dfcat = DFCatalogModel.load(
+            self.path,
+            self.name_column,
+            self.yaml_column,
+            self.storage_options,
+            **self._read_kwargs,
+        )
+
+    @property
+    def df(self):
+        """
+        Return pandas :py:class:`~pandas.DataFrame` representation of the catalog.
+        """
+        return self.dfcat.df
+
     def keys(self):
         """
         Get keys for the catalog entries
@@ -276,21 +295,17 @@ class DFFileCatalog(Catalog):
                 f"key={key} not found in catalog. You can access the list of valid keys via the .keys() method."
             ) from e
 
-    def _load(self):
-        """
-        Load the DF catalog from file.
-        """
-        self.dfcat = DFCatalogModel.load(
-            self.path,
-            self.name_column,
-            self.yaml_column,
-            self.storage_options,
-            **self._read_kwargs,
-        )
+    def __repr__(self):
+        """Make string representation of object."""
+        return f"<Dataframe catalog with {len(self)} sub-catalogs(s)>"
 
-    @property
-    def df(self):
+    def _get_entries(self):
         """
-        Return pandas :py:class:`~pandas.DataFrame` representation of the catalog.
+        Make sure all entries are in self._entries.
+
+        Entries are created just-in-time so we need to make sure to create entries missing from self._entries
         """
-        return self.dfcat.df
+        missing = set(self.keys()) - set(self._entries.keys())
+        for key in missing:
+            _ = self[key]
+        return self._entries
