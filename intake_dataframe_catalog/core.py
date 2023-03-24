@@ -1,407 +1,148 @@
-import typing
-import warnings
+import fsspec
 
-import pydantic
-
-import pandas as pd
-
-from intake.catalog import Catalog
-
-from intake_esm.cat import ESMCatalogModel
-from intake_esm.core import esm_datastore
-
-
-class MetaDatastoreError(Exception):
+class DFCatalogValidationError(Exception):
     pass
 
-
-class meta_esm_datastore(Catalog):
+class DFCatalogModel:
     """
-    An intake plugin for parsing a meta-esm catalog and loading assets into intake-esm catalogs.
-    The in-memory representation for the meta-esm catalog is a Pandas DataFrame.
-
-    Parameters
-    ----------
-    obj : str, dict
-        If string, this must be a path or URL to a meta-esm catalog JSON file.
-        If dict, this must be a dict representation of a meta-esm catalog.
-        This dict must have two keys: 'esmcat' and 'df'. The 'esmcat' key must be a
-        dict representation of the meta-esm catalog and the 'df' key must
-        be a Pandas DataFrame containing content that would otherwise be in a CSV file.
-    sep : str, optional
-        Delimiter to use when constructing a key for a query, by default '.'
-    read_csv_kwargs : dict, optional
-        Additional keyword arguments passed through to the :py:func:`~pandas.read_csv` function.
-    storage_options : dict, optional
-        Parameters passed to the backend file-system such as Google Cloud Storage,
-        Amazon Web Service S3.
-    intake_kwargs: dict, optional
-        Additional keyword arguments are passed through to the :py:class:`~intake.catalog.Catalog` base class.
+    Model for a dataframe (DF) catalog of intake catalogs and associated metadata. The in-memory
+    representation for the catalog is a Pandas DataFrame.
     """
-
-    name = "meta_esm_datastore"
-    container = "catalog"
-
+    
     def __init__(
         self,
-        obj: typing.Union[pydantic.FilePath, pydantic.AnyUrl, dict[str, typing.Any]],
-        *,
-        sep: str = ".",
-        read_csv_kwargs: dict[str, typing.Any] = None,
-        storage_options: dict[str, typing.Any] = None,
-        **intake_kwargs: dict[str, typing.Any],
+        name_column="name", 
+        yaml_column="yaml",
+        metadata_columns=None,
     ):
-        """Intake catalog representing a meta-esm collection."""
-        super().__init__(**intake_kwargs)
-        self.sep = sep
-        self.read_csv_kwargs = read_csv_kwargs or {}
-        self.storage_options = storage_options or {}
-
-        if isinstance(obj, dict):
-            self.esmcat = ESMCatalogModel.from_dict(obj)
-        else:
-            self.esmcat = ESMCatalogModel.load(
-                obj,
-                storage_options=self.storage_options,
-                read_csv_kwargs=read_csv_kwargs,
-            )
-
-        self._entries = {}
-        self.esm_datastores = {}
-
-    def keys(self) -> list[str]:
         """
-        Get keys for the catalog entries
-
-        Returns
-        -------
-        list
-            keys for the catalog entries
-        """
-        return list(self.esmcat._construct_group_keys(sep=self.sep).keys())
-
-    def keys_info(self) -> pd.DataFrame:
-        """
-        Get keys for the catalog entries and their metadata
-
-        Returns
-        -------
-        pandas.DataFrame
-            keys for the catalog entries and their metadata
-
-        Examples
-        --------
-
-        >>> import intake
-        >>> cat = intake.open_meta_esm_datastore("./tests/sample-catalogs/cesm1-lens-netcdf.json")
-        >>> cat.keys_info()
-                        component experiment stream
-        key
-        ocn.20C.pop.h         ocn        20C  pop.h
-        ocn.CTRL.pop.h        ocn       CTRL  pop.h
-        ocn.RCP85.pop.h       ocn      RCP85  pop.h
-
-
-
-        """
-        results = self.esmcat._construct_group_keys(sep=self.sep)
-        data = {
-            key: dict(zip(self.esmcat.aggregation_control.groupby_attrs, results[key]))
-            for key in results
-        }
-        data = pd.DataFrame.from_dict(data, orient="index")
-        data.index.name = "key"
-        return data
-
-    @property
-    def key_template(self) -> str:
-        """
-        Return string template used to create catalog entry keys
-
-        Returns
-        -------
-        str
-          string template used to create catalog entry keys
-        """
-        if self.esmcat.aggregation_control.groupby_attrs:
-            return self.sep.join(self.esmcat.aggregation_control.groupby_attrs)
-        else:
-            return self.sep.join(self.esmcat.df.columns)
-
-    @property
-    def df(self) -> pd.DataFrame:
-        """
-        Return pandas :py:class:`~pandas.DataFrame` representation of the meta-esm catalog.
-        """
-        return self.esmcat.df
-
-    def __len__(self) -> int:
-        return len(self.keys())
-
-    def _get_entries(self) -> dict[str, esm_datastore]:
-        # Due to just-in-time entry creation, we may not have all entries loaded
-        # We need to make sure to create entries missing from self._entries
-        missing = set(self.keys()) - set(self._entries.keys())
-        for key in missing:
-            _ = self[key]
-        return self._entries
-
-    @pydantic.validate_arguments
-    def __getitem__(self, key: str) -> esm_datastore:
-        """
-        This method takes a unique key argument according to groupby_attr and returns the
-        corresponding intake-esm datastore.
-
         Parameters
         ----------
-        key : str
-          key to use for catalog entry lookup
-
-        Returns
-        -------
-        intake_esm.core.esm_datastore
-             An intake-esm datastore
-
-        Raises
-        ------
-        KeyError
-            if key is not found.
-
-        Examples
-        --------
-        >>> meta_cat = intake.open_meta_esm_datastore("meta.json")
-        >>> exp_cat = meta_cat["my_model.my_experiment"]
+        name_column: str, optional
+            Name of the column in the DF catalog containing the names of the intake catalogs
+        yaml_column: str, optional
+            Name of the column in the DF catalog containing intake yaml descriptions of the intake 
+            catalogs
+        metadata_columns: list of str, optional
+            Names of additional columns in the DF catalog containing metadata for each of the intake 
+            catalogs
         """
-        # The canonical unique key is the key of a compatible group of assets
-        try:
-            return self._entries[key]
-        except KeyError as e:
-            if key in self.keys():
-                keys_dict = self.esmcat._construct_group_keys(sep=self.sep)
-                grouped = self.esmcat.grouped
+        
+        self.name_column = name_column
+        self.yaml_column = yaml_column
+        self.metadata_columns = metadata_columns or []
 
-                internal_key = keys_dict[key]
-
-                if isinstance(grouped, pd.DataFrame):
-                    records = [grouped.loc[internal_key].to_dict()]
-                else:
-                    records = grouped.get_group(internal_key).to_dict(orient="records")
-
-                catalog_files = [
-                    record[self.esmcat.assets.column_name] for record in records
-                ]
-
-                if len(set(catalog_files)) != 1:
-                    raise MetaDatastoreError(
-                        f"Unique key {internal_key} refers to multiple ESM datastores"
-                    )
-
-                entry = esm_datastore(
-                    catalog_files[0],
-                    sep=self.sep,
-                    storage_options=self.storage_options,
-                    # read_csv_kwargs=self.read_csv_kwargs
-                )
-
-                self._entries[key] = entry
-                return self._entries[key]
-            raise KeyError(
-                f"key={key} not found in catalog. You can access the list of valid keys via the .keys() method."
-            ) from e
-
-    def __contains__(self, key) -> bool:
-        # Python falls back to iterating over the entire catalog if this method is not defined. To avoid this,
-        # we implement it differently
-        try:
-            self[key]
-        except KeyError:
-            return False
-        else:
-            return True
-
-    def __repr__(self) -> str:
-        """Make string representation of object."""
-        return f'<{self.esmcat.id or ""} catalog with {len(self)} experiment(s) from {len(self.df)} asset(s)>'
-
-    def _repr_html_(self) -> str:
-        """
-        Return an html representation for the catalog object.
-        Mainly for IPython notebook
-        """
-        uniques = pd.DataFrame(self.nunique(), columns=["unique"])
-        text = uniques._repr_html_()
-        return (
-            f'<p><strong>{self.esmcat.id or ""} catalog with {len(self)} experiment(s)'
-            f"from {len(self.df)} asset(s)</strong>:</p> {text}"
+        self._df = pd.DataFrame(
+            columns=[self.name_column] + self.metadata_columns + [self.yaml_column]
         )
-
-    def _ipython_display_(self):
+        
+    @classmethod
+    def load(cls, urlpath, name_column="name", yaml_column="yaml", storage_options=None, **kwargs):
         """
-        Display the entry as a rich object in an IPython session
-        """
-        from IPython.display import HTML, display
-
-        contents = self._repr_html_()
-        display(HTML(contents))
-
-    def __dir__(self) -> list[str]:
-        rv = [
-            "df",
-            "keys",
-            "keys_info",
-            "serialize",
-            "datasets",
-            "search",
-            "unique",
-            "nunique",
-            "key_template",
-            "to_esm_datastore",
-            "to_esm_datastore_dict",
-        ]
-        return sorted(list(self.__dict__.keys()) + rv)
-
-    def _ipython_key_completions_(self):
-        return self.__dir__()
-
-    @pydantic.validate_arguments
-    def search(
-        self, require_all_on: typing.Union[str, list[str]] = None, **query: typing.Any
-    ):
-        """Search for entries in the catalog.
-
+        Load a DF catalog from a file
+        
         Parameters
         ----------
-        require_all_on : list, str, optional
-            A dataframe column or a list of dataframe columns across
-            which all entries must satisfy the query criteria.
-            If None, return entries that fulfill any of the criteria specified
-            in the query, by default None.
-        **query:
-            keyword arguments corresponding to user's query to execute against the dataframe.
-
-        Returns
-        -------
-        cat : :py:class:`~intake_meta_esm.core.meta_esm_datastore`
-          A new Catalog with a subset of the entries in this Catalog.
-
-        Examples
-        --------
-        >>> import intake
-        >>> meta_cat = intake.open_meta_esm_datastore("meta.json")
-        >>> sub_cat = cat.search(
-        ...     model="access-om2",
-        ...     variable="sst",
-        ... )
+        urlpath: str
+            Path to the DF catalog file. May be a local path, or remote path if including a protocol
+            specifier such as ``'s3://'``.
+        name_column: str, optional
+            Name of the column in the dataframe containing the names of the intake catalogs
+        yaml_column: str, optional
+            Name of the column in the dataframe containing intake yaml descriptions of the intake 
+            catalogs
+        storage_options: dict, optional
+            Any parameters that need to be passed to the remote data backend, such as credentials.
+        kwargs: dict, optional
+            Additional keyword arguments passed to :py:func:`~dask.dataframe.read_csv`
         """
+        storage_options = storage_options or {}
+        kwargs = kwargs or {}
+        _mapper = fsspec.get_mapper(urlpath, **storage_options)
 
-        esmcat_results = self.esmcat.search(require_all_on=require_all_on, query=query)
-
-        cat = self.__class__({"esmcat": self.esmcat.dict(), "df": esmcat_results})
-        cat.esmcat.catalog_file = None  # Don't save the catalog file
+        with fsspec.open(urlpath, **storage_options) as fobj:
+            df = pd.read_csv(fobj, **kwargs)
+            
+        metadata_columns = list(set(df.columns) - set([name_column, yaml_column]))
+        cat = cls(name_column, yaml_column, metadata_columns)
+        cat._df = df
+        cat.validate()
+        
         return cat
-
-    @pydantic.validate_arguments
-    def serialize(
-        self,
-        name: pydantic.StrictStr,
-        directory: typing.Union[pydantic.DirectoryPath, pydantic.StrictStr] = None,
-        catalog_type: str = "dict",
-        to_csv_kwargs: dict[typing.Any, typing.Any] = None,
-        json_dump_kwargs: dict[typing.Any, typing.Any] = None,
-        storage_options: dict[str, typing.Any] = None,
-    ) -> None:
-        """Serialize catalog to corresponding json and csv files.
-
+    
+    def save(urlpath, storage_options=None, **kwargs):
+        """
+        Save a DF catalog to a file
+        
         Parameters
         ----------
-        name : str
-            name to use when creating ESM catalog json file and csv catalog.
-        directory : str, PathLike, default None
-            The path to the local directory. If None, use the current directory
-        catalog_type: str, default 'dict'
-            Whether to save the catalog table as a dictionary in the JSON file or as a separate CSV file.
-        to_csv_kwargs : dict, optional
-            Additional keyword arguments passed through to the :py:meth:`~pandas.DataFrame.to_csv` method.
-        json_dump_kwargs : dict, optional
-            Additional keyword arguments passed through to the :py:func:`~json.dump` function.
-        storage_options: dict
-            fsspec parameters passed to the backend file-system such as Google Cloud Storage,
-            Amazon Web Service S3.
-
-        Notes
-        -----
-        Large catalogs can result in large JSON files. To keep the JSON file size manageable, call with
-        `catalog_type='file'` to save catalog as a separate CSV file.
-
-        Examples
-        --------
-        >>> import intake
-        >>> meta_cat = intake.open_meta_esm_datastore("meta.json")
-        >>> sub_cat = cat.search(
-        ...     model="access-om2",
-        ...     variable="sst",
-        ... )
-        >>> sub_cat.serialize(name="access_om2_sst", catalog_type="file")
+        urlpath: str
+            Path to the DF catalog file. May be a local path, or remote path if
+            including a protocol specifier such as ``'s3://'``.
+        storage_options: dict, optional
+            Any parameters that need to be passed to the remote data backend, such as credentials.
+        kwargs: dict, optional
+            Additional keyword arguments passed to :py:func:`~dask.dataframe.to_csv`
         """
-
-        self.esmcat.save(
-            name,
-            directory=directory,
-            catalog_type=catalog_type,
-            to_csv_kwargs=to_csv_kwargs,
-            json_dump_kwargs=json_dump_kwargs,
-            storage_options=storage_options,
-        )
-
-    def nunique(self) -> pd.Series:
-        """Count distinct observations across dataframe columns
-        in the catalog.
+        
+    def add(self, cat, metadata=None, overwrite=False):
         """
-        nunique = self.esmcat.nunique()
-        return nunique
-
-    def unique(self) -> pd.Series:
-        """Return unique values for given columns in the
-        catalog.
-        """
-        unique = self.esmcat.unique()
-        return unique
-
-    @pydantic.validate_arguments
-    def to_esm_datastore_dict(self) -> dict[str, esm_datastore]:
-        """
-        Load intake-esm catalog(s) for the experiment(s) in this meta-esm catalog.
-        """
-        if not self.keys():
-            warnings.warn(
-                "There are no experiments to return catalogs for! Returning an empty dictionary.",
-                UserWarning,
-                stacklevel=2,
-            )
-            return {}
-
-        self.esm_datastores = {key: cat for key, cat in self.items()}
-        return self.esm_datastores
-
-    def to_esm_datastore(self, **kwargs) -> esm_datastore:
-        """
-        Load an intake-esm catalog for the experiment in this meta-esm catalog.
-
-        This is only possible if the search returned exactly one result.
-
+        Add an intake catalog to the DF catalog
+        
         Parameters
         ----------
-        kwargs: dict
-          Parameters forwarded to :py:func:`~intake_esm.esm_datastore.to_dataset_dict`.
-
-        Returns
-        -------
-        :py:class:`~xarray.Dataset`
+        cat: object 
+            An intake catalog object with a .yaml() method
+        metadata : dict, optional
+            Dictionary of metadata associated with the intake catalog
+        overwrite : bool, optional
+            If True, overwrite all existing entries in the DF catalog with name_column entries that 
+            match the name of this cat
         """
-        if len(self) != 1:  # quick check to fail more quickly if there are many results
-            raise ValueError(
-                f"Expected exactly one experiment. Received {len(self)} experiments."
-                "Please refine your search or use `.to_esm_datastore_dict()`."
+        metadata = metadata or {}
+        data = metadata.copy()
+        data[self.name_column] = cat.name
+        data[self.yaml_column] = cat.yaml()
+        row = pd.DataFrame(data, index=[0])
+        
+        if set(self.df.columns) == set(row.columns):
+            if overwrite:
+                self._df.loc[self._df[self.name_column] == data[self.name_column]] = row
+                self._df = self._df.dropna()
+            else:
+                self._df = pd.concat([self._df, row], ignore_index=True)
+        else:
+            raise DFCatalogValidationError(
+                f"metadata must include the following keys to be added to this DF catalog: {self.metadata_columns}. "
+                f"You passed a dictionary with the following keys: {list(metadata.keys())}"
             )
-        _, cat = self.to_esm_datastore_dict().popitem()
-        return cat
+            
+        self.validate()
+    
+    def validate(self):
+        """
+        Validate a DF catalog
+        """
+        cols_avail = set(self.df.columns)
+        cols_valid = set([self.name_column] + self.metadata_columns + [self.yaml_column])
+        invalid_cols = cols_avail - cols_valid
+        missing_cols = cols_valid - cols_avail
+        
+        if invalid_cols:
+            raise DFCatalogValidationError(
+                f"The following columns are invalid for this DF catalog: {invalid_cols}. "
+                f"Valid column names are {cols_valid}."
+            ) 
+            
+        if missing_cols:
+            raise DFCatalogValidationError(
+                f"The following columns are missing for this DF catalog: {missing_cols}. "
+                f"Available column names are {cols_avail}."
+            )
+        
+    @property
+    def df(self):
+        """
+        Return pandas :py:class:`~pandas.DataFrame` representation of the catalog.
+        """
+        return self._df
