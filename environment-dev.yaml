@@ -1,0 +1,15 @@
+name: intake-df-cat-dev
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.10
+  - black
+  - flake8
+  - intake
+  - versioneer
+  - pip
+  - pip:
+    - pytest
+    - pytest-cov
+    - pre-commit
