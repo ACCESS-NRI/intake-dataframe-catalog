@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import tlz
 import typing
 
 import yaml
@@ -49,10 +50,11 @@ class DFCatalogModel:
         self.yaml_column = yaml_column
         self.name_column = name_column
         self.metadata_columns = metadata_columns or []
-
-        self._df = pd.DataFrame(
-            columns=[self.name_column] + self.metadata_columns + [self.yaml_column]
+        self._valid_columns = (
+            [self.name_column] + self.metadata_columns + [self.yaml_column]
         )
+
+        self._df = pd.DataFrame(columns=self._valid_columns)
 
     @classmethod
     def load(
@@ -101,7 +103,7 @@ class DFCatalogModel:
     @classmethod
     def from_dict(
         cls,
-        entries: dict[str, typing.Any],
+        entries: dict[list, typing.Any],
         cat_key: str,
         yaml_column: str = "yaml",
         name_column: str = "name",
@@ -111,11 +113,11 @@ class DFCatalogModel:
 
         Parameters
         ----------
-        entries : list of dict-like
-            List containing dictionaries for each row of the DF catalog. Each dictionary should include
-            at least the intake catalog object to be added to the DF catalog
-        cat_key : str
-            The key in each dictionary corresponding to the intake catalog object
+        entries : dict
+            Dictionary with at least a key containing a list of intake catalog objects. Additional
+            metadata can be included in corresponding lists in other keys.
+        cat_key : str, optional
+            The key in the dictionary corresponding to the intake catalog object
         yaml_column: str, optional
             Name of the column in the dataframe containing intake yaml descriptions of the intake
             catalogs.
@@ -127,16 +129,14 @@ class DFCatalogModel:
         catalog: DFCatalogModel
             A DF catalog.
         """
-        metadata_columns = list(
-            entries[0].keys()
-        )  # metadata keys will be checked for consistency below
-        metadata_columns.remove(cat_key)
+
+        cats = entries.pop(cat_key)
+        metadata_columns = list(entries.keys())
+        entries[yaml_column] = [cat.yaml() for cat in cats]
+        entries[name_column] = [cat.name for cat in cats]
 
         cat = cls(yaml_column, name_column, metadata_columns)
-
-        for entry in entries:
-            subcat = entry.pop(cat_key)
-            cat.add(subcat, entry)
+        cat._df = pd.DataFrame(entries)
         cat.validate()
 
         return cat
@@ -229,9 +229,7 @@ class DFCatalogModel:
         Validate a DF catalog
         """
         cols_avail = set(self.columns)
-        cols_valid = set(
-            [self.name_column] + self.metadata_columns + [self.yaml_column]
-        )
+        cols_valid = set(self._valid_columns)
         invalid_cols = cols_avail - cols_valid
         missing_cols = cols_valid - cols_avail
 
@@ -247,9 +245,10 @@ class DFCatalogModel:
                 f"Available column names are {cols_avail}."
             )
 
-    def search(
-        self, require_all_on: typing.Union[str, list[str]] = None, **query: typing.Any
-    ) -> "DFCatalogModel":
+        # Reorder columns for readability
+        self._df = self._df[self._valid_columns]
+
+    def search(self, require_all: bool = False, **query: typing.Any) -> pd.DataFrame:
         """
         Search for entries in the catalog.
 
@@ -257,25 +256,17 @@ class DFCatalogModel:
         ----------
         query: dict, optional
             A dictionary of query parameters to execute against the DF catalog.
-        require_all_on : str or list of str, optional
-            A column or a list of columns in the DF catalog across which all entries must satisfy
-            the query criteria. If None, return entries that fulfill any of the criteria specified
-            in the query.
+        require_all : bool, optional
+            If True, entries must satisfy all the query criteria, otherwise results that satisfy any of criteria
+            are returned.
 
         Returns
         -------
-        catalog: DFCatalogModel
-            A new catalog with the entries satisfying the query criteria.
+        dataframe: :py:class:`~pandas.DataFrame`
+            A new dataframe with the entries satisfying the query criteria.
         """
 
         columns = self.columns
-
-        if require_all_on:
-            if isinstance(require_all_on, str):
-                require_all_on = [require_all_on]
-            for key in require_all_on:
-                if key not in columns:
-                    raise ValueError(f"Column {key} not in columns {columns}")
 
         for key, value in query.items():
             if key not in columns:
@@ -286,24 +277,44 @@ class DFCatalogModel:
         results = search(
             df=self.df, query=query, columns_with_iterables=self.columns_with_iterables
         )
-        if require_all_on is not None and not results.empty:
+        if require_all and not results.empty:
             results = search_apply_require_all_on(
                 df=results,
                 query=query,
-                require_all_on=require_all_on,
+                require_all_on=self.name_column,
                 columns_with_iterables=self.columns_with_iterables,
             )
         return results
+
+    def _unique(self) -> dict:
+        def _find_unique(series):
+            values = series.dropna()
+            if series.name in self.columns_with_iterables:
+                values = tlz.concat(values)
+            return list(tlz.unique(values))
+
+        data = self.df[self.df.columns]
+        if data.empty:
+            return {col: [] for col in self.df.columns}
+        else:
+            return data.apply(_find_unique, result_type="reduce").to_dict()
+
+    def unique(self) -> pd.Series:
+        """
+        Return a series of unique values for each column in the DF catalog.
+        """
+        return pd.Series(self._unique())
+
+    def nunique(self) -> pd.Series:
+        """
+        Return a series of the number of unique values for each column in the DF catalog.
+        """
+        return pd.Series(tlz.valmap(len, self._unique()))
 
     @property
     def df(self) -> pd.DataFrame:
         """
         Return pandas :py:class:`~pandas.DataFrame` representation of the catalog.
-
-        Returns
-        -------
-        df: :py:class:`~pandas.DataFrame`
-            Dataframe of the data in the catalog
         """
         return self._df
 
@@ -311,11 +322,6 @@ class DFCatalogModel:
     def columns(self) -> list[str]:
         """
         Return a list of the columns in the DF catalog.
-
-        Returns
-        -------
-        columns: list of str
-            List of the columns in the DF catalog.
         """
         return self.df.columns.tolist()
 
@@ -323,11 +329,6 @@ class DFCatalogModel:
     def columns_with_iterables(self) -> set[str]:
         """
         Return a set of the columns in the DF catalog that have iterables.
-
-        Returns
-        -------
-        columns: list of str
-            List of the columns in the DF catalog that have iterables.
         """
 
         if self._df.empty:
@@ -354,7 +355,7 @@ class DFFileCatalog(Catalog):
 
     def __init__(
         self,
-        path: str,
+        path: str = None,
         yaml_column: str = "yaml",
         name_column: str = "name",
         storage_options: dict[str, typing.Any] = None,
@@ -387,7 +388,7 @@ class DFFileCatalog(Catalog):
         self._read_kwargs = read_kwargs or {}
 
         self._entries = {}
-        self.dfcat = None
+        self.dfcat = DFCatalogModel(self.yaml_column, self.name_column)
 
         super().__init__(**intake_kwargs)
 
@@ -395,13 +396,14 @@ class DFFileCatalog(Catalog):
         """
         Load the DF catalog from file.
         """
-        self.dfcat = DFCatalogModel.load(
-            self.path,
-            self.yaml_column,
-            self.name_column,
-            self.storage_options,
-            **self._read_kwargs,
-        )
+        if self.path:
+            self.dfcat = DFCatalogModel.load(
+                self.path,
+                self.yaml_column,
+                self.name_column,
+                self.storage_options,
+                **self._read_kwargs,
+            )
 
     def serialize(
         self,
@@ -432,9 +434,7 @@ class DFFileCatalog(Catalog):
 
     save = serialize
 
-    def search(
-        self, require_all_on: typing.Union[str, list[str]] = None, **query: typing.Any
-    ) -> "DFFileCatalog":
+    def search(self, require_all: bool = False, **query: typing.Any) -> "DFFileCatalog":
         """
         Search for entries in the catalog.
 
@@ -442,10 +442,9 @@ class DFFileCatalog(Catalog):
         ----------
         query: dict, optional
             A dictionary of query parameters to execute against the DF catalog.
-        require_all_on : str or list of str, optional
-            A column or a list of columns in the DF catalog across which all entries must satisfy
-            the query criteria. If None, return entries that fulfill any of the criteria specified
-            in the query.
+        require_all : bool, optional
+            If True, entries must satisfy all the query criteria, otherwise results that satisfy any of criteria
+            are returned.
 
         Returns
         -------
@@ -453,10 +452,10 @@ class DFFileCatalog(Catalog):
             A new catalog with the entries satisfying the query criteria.
         """
 
-        dfcat_results = self.dfcat.search(require_all_on, **query)
+        dfcat_results = self.dfcat.search(require_all, **query)
 
-        cat = self.copy()
-        cat.dfcat = dfcat_results
+        cat = self.__class__()
+        cat.dfcat._df = dfcat_results
         return cat
 
     @property
@@ -480,7 +479,19 @@ class DFFileCatalog(Catalog):
         keys: list of str
             List of keys for the catalog entries
         """
-        return list(self.df[self.name_column])
+        return self.unique()[self.name_column]
+
+    def nunique(self) -> pd.Series:
+        """
+        Return a series of the number of unique values for each column in the DF catalog.
+        """
+        return self.dfcat.nunique()
+
+    def unique(self) -> pd.Series:
+        """
+        Return a series of unique values for each column in the DF catalog.
+        """
+        return self.dfcat.unique()
 
     def __len__(self) -> int:
         return len(self.keys())
@@ -519,7 +530,7 @@ class DFFileCatalog(Catalog):
             ) from e
 
     def __repr__(self) -> str:
-        return f"<Dataframe catalog with {len(self)} sub-catalogs(s)>"
+        return f"<Dataframe catalog with {len(self)} sub-catalogs(s) and {len(self.df)} rows>"
 
     def _get_entries(self) -> dict[str, intake.DataSource]:
         """

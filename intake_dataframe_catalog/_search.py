@@ -11,7 +11,21 @@ import pandas as pd
 
 
 def unpack_iterable_column(df: pd.DataFrame, column: str) -> pd.DataFrame:
-    """Return a DataFrame where elements of a given iterable column have been unpacked into multiple lines."""
+    """
+    Return a DataFrame where elements of a given iterable column have been unpacked into multiple lines.
+
+    Parameters
+    ----------
+    df: :py:class:`~pandas.DataFrame`
+        A dataframe to unpack
+    column: str
+        The name of the column to unpack
+
+    Returns
+    -------
+    unpacked: :py:class:`~pandas.DataFrame`
+        An unpacked dataframe
+    """
     rows = []
     for _, row in df.iterrows():
         for val in row[column]:
@@ -22,6 +36,14 @@ def unpack_iterable_column(df: pd.DataFrame, column: str) -> pd.DataFrame:
 
 
 def is_pattern(value: typing.Union[str, typing.Pattern]) -> bool:
+    """
+    Check whether the passed value is a pattern
+
+    Parameters
+    ----------
+    value: str or Pattern
+        The value to check
+    """
     if isinstance(value, typing.Pattern):
         return True
     wildcard_chars = {"*", "?", "$", "^"}
@@ -35,9 +57,25 @@ def is_pattern(value: typing.Union[str, typing.Pattern]) -> bool:
 
 
 def search(
-    *, df: pd.DataFrame, query: dict[str, typing.Any], columns_with_iterables: set
+    df: pd.DataFrame, query: dict[str, typing.Any], columns_with_iterables: set
 ) -> pd.DataFrame:
-    """Search for entries in the catalog."""
+    """
+    Search for entries in the catalog.
+
+    Parameters
+    ----------
+    df: :py:class:`~pandas.DataFrame`
+        A dataframe to search
+    query: dict
+        A dictionary of query parameters to execute against the dataframe
+    columns_with_iterables:
+        Columns in the dataframe that have iterables
+
+    Returns
+    -------
+    dataframe: :py:class:`~pandas.DataFrame`
+            A new dataframe with the entries satisfying the query criteria.
+    """
 
     if not query:
         return pd.DataFrame(columns=df.columns)
@@ -62,12 +100,30 @@ def search(
 
 
 def search_apply_require_all_on(
-    *,
     df: pd.DataFrame,
     query: dict[str, typing.Any],
     require_all_on: typing.Union[str, list[typing.Any]],
     columns_with_iterables: set = None,
 ) -> pd.DataFrame:
+    """
+    Trim a dataframe to include only rows that fulfill all query criteria.
+
+    Parameters
+    ----------
+    df: :py:class:`~pandas.DataFrame`
+        A dataframe to search
+    query: dict
+        A dictionary of query parameters to execute against the dataframe
+    require_all_on: str or list of str
+        Column(s) to groupby before requiring all
+    columns_with_iterables:
+        Columns in the dataframe that have iterables
+
+    Returns
+    -------
+    dataframe: :py:class:`~pandas.DataFrame`
+            A new dataframe with the entries satisfying the query criteria.
+    """
 
     _query = query.copy()
     # Make sure to remove columns that were already
