@@ -1,0 +1,25 @@
+name,meta,yaml
+csv0,0,"sources:
+  csv0:
+    args:
+      urlpath: test.csv
+    description: ''
+    driver: intake.source.csv.CSVSource
+    metadata: {}
+"
+csv1,1,"sources:
+  csv1:
+    args:
+      urlpath: test.csv
+    description: ''
+    driver: intake.source.csv.CSVSource
+    metadata: {}
+"
+csv2,2,"sources:
+  csv2:
+    args:
+      urlpath: test.csv
+    description: ''
+    driver: intake.source.csv.CSVSource
+    metadata: {}
+"

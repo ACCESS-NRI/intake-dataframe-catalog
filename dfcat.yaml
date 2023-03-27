@@ -1,0 +1,7 @@
+sources:
+  dfcat:
+    args:
+      path: dfcat.csv
+    description: ''
+    driver: intake_dataframe_catalog.core.DFFileCatalog
+    metadata: {}

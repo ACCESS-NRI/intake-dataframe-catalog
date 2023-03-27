@@ -1,0 +1,17 @@
+sources:
+  test0:
+    description: test0 entry
+    metadata:
+      foo: 'bar'
+      bar: [1, 2, 3]
+    driver: csv
+    args:
+      urlpath: './test.csv'
+  test1:
+    description: test1 entry
+    metadata:
+      foo: 'bar'
+      bar: [1, 2, 3]
+    driver: csv
+    args:
+      urlpath: './test.csv'
