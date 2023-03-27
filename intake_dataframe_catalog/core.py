@@ -4,6 +4,7 @@
 import os
 import tlz
 import typing
+import warnings
 
 import yaml
 import fsspec
@@ -39,12 +40,12 @@ class DFCatalogModel:
         ----------
         yaml_column: str, optional
             Name of the column in the DF catalog containing intake yaml descriptions of the intake
-            catalogs
+            catalogs.
         name_column: str, optional
-            Name of the column in the DF catalog containing the names of the intake catalogs
+            Name of the column in the DF catalog containing the names of the intake catalogs.
         metadata_columns: list of str, optional
             Names of additional columns in the DF catalog containing metadata for each of the intake
-            catalogs
+            catalogs.
         """
 
         self.yaml_column = yaml_column
@@ -66,7 +67,7 @@ class DFCatalogModel:
         **kwargs: dict[str, typing.Any],
     ) -> "DFCatalogModel":
         """
-        Load a DF catalog from a file
+        Load a DF catalog from a file.
 
         Parameters
         ----------
@@ -87,6 +88,7 @@ class DFCatalogModel:
         catalog: DFCatalogModel
             A DF catalog.
         """
+
         storage_options = storage_options or {}
         kwargs = kwargs or {}
 
@@ -109,7 +111,7 @@ class DFCatalogModel:
         name_column: str = "name",
     ) -> "DFCatalogModel":
         """
-        Create a DF catalog from the given set of entries in dictionary format
+        Create a DF catalog from the given set of entries in dictionary format.
 
         Parameters
         ----------
@@ -117,7 +119,7 @@ class DFCatalogModel:
             Dictionary with at least a key containing a list of intake catalog objects. Additional
             metadata can be included in corresponding lists in other keys.
         cat_key : str, optional
-            The key in the dictionary corresponding to the intake catalog object
+            The key in the dictionary corresponding to the intake catalog object.
         yaml_column: str, optional
             Name of the column in the dataframe containing intake yaml descriptions of the intake
             catalogs.
@@ -149,7 +151,7 @@ class DFCatalogModel:
         **kwargs: dict[str, typing.Any],
     ) -> None:
         """
-        Save a DF catalog to a file
+        Save a DF catalog to a file.
 
         Parameters
         ----------
@@ -163,6 +165,7 @@ class DFCatalogModel:
         kwargs: dict, optional
             Additional keyword arguments passed to :py:func:`~dask.dataframe.to_csv`.
         """
+
         if directory is None:
             directory = os.getcwd()
 
@@ -192,18 +195,19 @@ class DFCatalogModel:
         overwrite: bool = False,
     ) -> None:
         """
-        Add an intake catalog to the DF catalog
+        Add an intake catalog to the DF catalog.
 
         Parameters
         ----------
         cat: object
-            An intake DataSource object (or child thereof) with a .yaml() method
+            An intake DataSource object (or child thereof) with a .yaml() method.
         metadata : dict, optional
-            Dictionary of metadata associated with the intake catalog
+            Dictionary of metadata associated with the intake catalog.
         overwrite : bool, optional
             If True, overwrite all existing entries in the DF catalog with name_column entries that
-            match the name of this cat
+            match the name of this cat.
         """
+
         metadata = metadata or {}
         data = metadata.copy()
         data[self.yaml_column] = cat.yaml()
@@ -226,8 +230,9 @@ class DFCatalogModel:
 
     def validate(self) -> None:
         """
-        Validate a DF catalog
+        Validate a DF catalog.
         """
+
         cols_avail = set(self.columns)
         cols_valid = set(self._valid_columns)
         invalid_cols = cols_avail - cols_valid
@@ -284,6 +289,7 @@ class DFCatalogModel:
                 require_all_on=self.name_column,
                 columns_with_iterables=self.columns_with_iterables,
             )
+
         return results
 
     def _unique(self) -> dict:
@@ -314,7 +320,7 @@ class DFCatalogModel:
     @property
     def df(self) -> pd.DataFrame:
         """
-        Return pandas :py:class:`~pandas.DataFrame` representation of the catalog.
+        Return :py:class:`~pandas.DataFrame` representation of the catalog.
         """
         return self._df
 
@@ -340,6 +346,7 @@ class DFCatalogModel:
             .any()
             .to_dict()
         )
+
         return {column for column, check in has_iterables.items() if check}
 
 
@@ -369,9 +376,9 @@ class DFFileCatalog(Catalog):
             Path to the DF catalog file.
         yaml_column: str, optional
             Name of the column in the tabular file containing intake yaml descriptions of the intake
-            catalogs
+            catalogs.
         name_column: str, optional
-            Name of the column in the tabular file containing the names of the intake catalogs
+            Name of the column in the tabular file containing the names of the intake catalogs.
         storage_options : dict, optional
             Any parameters that need to be passed to the remote data backend, such as credentials.
         read_kwargs : dict, optional
@@ -404,94 +411,6 @@ class DFFileCatalog(Catalog):
                 self.storage_options,
                 **self._read_kwargs,
             )
-
-    def serialize(
-        self,
-        name: str,
-        directory: str = None,
-        storage_options: dict[str, typing.Any] = None,
-        **kwargs: dict[str, typing.Any],
-    ) -> None:
-        """
-        Serialize DF catalog to a file.
-
-        Parameters
-        ----------
-        name: str
-            Name of the DF catalog file.
-        directory: str
-            The directory or cloud storage bucket to save the DF catalog to. If None, use the
-            current directory.
-        storage_options: dict, optional
-            Any parameters that need to be passed to the remote data backend, such as credentials.
-        kwargs: dict, optional
-            Additional keyword arguments passed to :py:func:`~dask.dataframe.to_csv`.
-        """
-
-        self.dfcat.save(
-            name, directory=directory, storage_options=storage_options, **kwargs
-        )
-
-    save = serialize
-
-    def search(self, require_all: bool = False, **query: typing.Any) -> "DFFileCatalog":
-        """
-        Search for entries in the catalog.
-
-        Parameters
-        ----------
-        query: dict, optional
-            A dictionary of query parameters to execute against the DF catalog.
-        require_all : bool, optional
-            If True, entries must satisfy all the query criteria, otherwise results that satisfy any of criteria
-            are returned.
-
-        Returns
-        -------
-        catalog: DFFileCatalog
-            A new catalog with the entries satisfying the query criteria.
-        """
-
-        dfcat_results = self.dfcat.search(require_all, **query)
-
-        cat = self.__class__()
-        cat.dfcat._df = dfcat_results
-        return cat
-
-    @property
-    def df(self) -> pd.DataFrame:
-        """
-        Return pandas :py:class:`~pandas.DataFrame` representation of the catalog.
-
-        Returns
-        -------
-        df: :py:class:`~pandas.DataFrame`
-            Dataframe of the data in the catalog
-        """
-        return self.dfcat.df
-
-    def keys(self) -> list[str]:
-        """
-        Get keys for the catalog entries
-
-        Returns
-        -------
-        keys: list of str
-            List of keys for the catalog entries
-        """
-        return self.unique()[self.name_column]
-
-    def nunique(self) -> pd.Series:
-        """
-        Return a series of the number of unique values for each column in the DF catalog.
-        """
-        return self.dfcat.nunique()
-
-    def unique(self) -> pd.Series:
-        """
-        Return a series of unique values for each column in the DF catalog.
-        """
-        return self.dfcat.unique()
 
     def __len__(self) -> int:
         return len(self.keys())
@@ -532,17 +451,152 @@ class DFFileCatalog(Catalog):
     def __repr__(self) -> str:
         return f"<Dataframe catalog with {len(self)} sub-catalogs(s) and {len(self.df)} rows>"
 
+    def to_subcatalog_dict(
+        self, **kwargs: dict[str, typing.Any]
+    ) -> dict[str, typing.Any]:
+        """
+        Load DF catalog entries into a dictionary of intake subcatalogs.
+
+        Parameters
+        ----------
+        kwargs: dict
+            Arguments/user parameters to use for opening the subcatalog(s). For example, many intake drivers support
+            a `storage_options` argument with parameters to be passed to the backend file-system. Note, this function
+            passes the same kwargs to all subcatalogs in the DF catalog. To pass different kwargs to different
+            subcatalogs, load each subcatalog using it's key (name), e.g. `dfcat["<subcat_name>"](**kwargs)`.
+
+        Returns
+        -------
+        subcatalogs: dict
+            A dictionary of subcatalogs.
+        """
+
+        if not self.keys():
+            warnings.warn(
+                "There are no subcatalogs to open! Returning an empty dictionary.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        return {key: subcat(**kwargs) for key, subcat in self.items()}
+
+    def to_subcatalog(self, **kwargs: dict[str, typing.Any]) -> intake.DataSource:
+        """
+        Load intake subcatalog. This is only possible if there is only one remaining subcatalog in the DF catalog.
+
+        Parameters
+        ----------
+        kwargs: dict
+            Arguments/user parameters to use for opening the subcatalog. For example, many intake drivers support
+            a `storage_options` argument with parameters to be passed to the backend file-system.`.
+
+        Returns
+        -------
+        subcatalog: :py:class:`intake.DataSource`
+            A dictionary of subcatalogs.
+        """
+
+        if len(self) == 1:
+            res = self.to_subcatalog_dict(**kwargs)
+            _, subcat = res.popitem()
+            return subcat
+        else:
+            raise ValueError(
+                f"Expected exactly one subcatalog, received {len(self)}. Please refine your search or use "
+                "`.to_subcatalog_dict()`."
+            )
+
+    def serialize(
+        self,
+        name: str,
+        directory: str = None,
+        storage_options: dict[str, typing.Any] = None,
+        **kwargs: dict[str, typing.Any],
+    ) -> None:
+        """
+        Serialize the DF catalog to a file.
+
+        Parameters
+        ----------
+        name: str
+            Name of the DF catalog file.
+        directory: str
+            The directory or cloud storage bucket to save the DF catalog to. If None, use the
+            current directory.
+        storage_options: dict, optional
+            Any parameters that need to be passed to the remote data backend, such as credentials.
+        kwargs: dict, optional
+            Additional keyword arguments passed to :py:func:`~dask.dataframe.to_csv`.
+        """
+        self.dfcat.save(
+            name, directory=directory, storage_options=storage_options, **kwargs
+        )
+
+    save = serialize
+
+    def search(self, require_all: bool = False, **query: typing.Any) -> "DFFileCatalog":
+        """
+        Search for entries in the catalog.
+
+        Parameters
+        ----------
+        query: dict, optional
+            A dictionary of query parameters to execute against the DF catalog.
+        require_all : bool, optional
+            If True, entries must satisfy all the query criteria, otherwise results that satisfy any of criteria
+            are returned.
+
+        Returns
+        -------
+        catalog: DFFileCatalog
+            A new catalog with the entries satisfying the query criteria.
+        """
+
+        dfcat_results = self.dfcat.search(require_all, **query)
+
+        cat = self.__class__()
+        cat.dfcat._df = dfcat_results
+
+        return cat
+
+    @property
+    def df(self) -> pd.DataFrame:
+        """
+        Return :py:class:`~pandas.DataFrame` representation of the catalog.
+        """
+        return self.dfcat.df
+
+    def keys(self) -> list[str]:
+        """
+        Return a list of keys for the catalog entries.
+        """
+        return self.unique()[self.name_column]
+
+    def nunique(self) -> pd.Series:
+        """
+        Return a series of the number of unique values for each column in the DF catalog.
+        """
+        return self.dfcat.nunique()
+
+    def unique(self) -> pd.Series:
+        """
+        Return a series of unique values for each column in the DF catalog.
+        """
+        return self.dfcat.unique()
+
     def _get_entries(self) -> dict[str, intake.DataSource]:
         """
         Make sure all entries are in self._entries. Entries are created just-in-time so we need to make sure to
-        create entries missing from self._entries
+        create entries missing from self._entries.
 
         Returns
         -------
         entries: dict
             Dictionary of all available entries in the DF catalog.
         """
+
         missing = set(self.keys()) - set(self._entries.keys())
         for key in missing:
             _ = self[key]
+
         return self._entries
