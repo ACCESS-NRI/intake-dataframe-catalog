@@ -9,6 +9,7 @@ setup(
     url="https://github.com/ACCESS-NRI/intake-dataframe-catalog",
     description="An intake driver for a searchable table of intake catalogs and associated metadata",
     packages=find_packages(),
+    package_dir={"": "src"},
     classifiers=[
         "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3",

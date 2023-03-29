@@ -44,8 +44,8 @@ def get_config():
     cfg.VCS = "git"
     cfg.style = "pep440"
     cfg.tag_prefix = "v"
-    cfg.parentdir_prefix = "intake_meta_esm-"
-    cfg.versionfile_source = "intake_meta_esm/_version.py"
+    cfg.parentdir_prefix = ""
+    cfg.versionfile_source = "src/intake_dataframe_catalog/_version.py"
     cfg.verbose = False
     return cfg
 

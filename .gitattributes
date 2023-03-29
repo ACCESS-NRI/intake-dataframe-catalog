@@ -1,1 +1,2 @@
 intake_dataframe_catalog/_version.py export-subst
+src/intake_dataframe_catalog/_version.py export-subst
