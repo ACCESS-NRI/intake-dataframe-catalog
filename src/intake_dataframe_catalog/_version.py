@@ -44,7 +44,7 @@ def get_config():
     cfg.VCS = "git"
     cfg.style = "pep440"
     cfg.tag_prefix = "v"
-    cfg.parentdir_prefix = ""
+    cfg.parentdir_prefix = "intake-dataframe-catalog-"
     cfg.versionfile_source = "src/intake_dataframe_catalog/_version.py"
     cfg.verbose = False
     return cfg
