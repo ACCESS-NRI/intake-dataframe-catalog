@@ -163,7 +163,7 @@ class DFCatalogModel:
         storage_options: dict, optional
             Any parameters that need to be passed to the remote data backend, such as credentials.
         kwargs: dict, optional
-            Additional keyword arguments passed to :py:func:`~dask.dataframe.to_csv`.
+            Additional keyword arguments passed to :py:func:`~pandas.DataFrame.to_csv`.
         """
 
         if directory is None:
@@ -212,7 +212,8 @@ class DFCatalogModel:
         data = metadata.copy()
         data[self.yaml_column] = cat.yaml()
         data[self.name_column] = cat.name
-        row = pd.DataFrame(data, index=[0])
+        row = pd.DataFrame(columns=data.keys())
+        row = row.append(data, ignore_index=True)
 
         if set(self.columns) == set(row.columns):
             if overwrite:
