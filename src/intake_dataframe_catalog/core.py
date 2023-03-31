@@ -212,15 +212,16 @@ class DFCatalogModel:
         data = metadata.copy()
         data[self.yaml_column] = cat.yaml()
         data[self.name_column] = cat.name
-        row = pd.DataFrame(columns=data.keys())
-        row = row.append(data, ignore_index=True)
+        row = pd.DataFrame({k: 0 for k in data.keys()}, index=[0])
+        row.iloc[0] = pd.Series(data)
 
         if set(self.columns) == set(row.columns):
-            if overwrite:
-                self._df.loc[self._df[self.name_column] == data[self.name_column]] = row
-                self._df = self._df.dropna()
+            _df = self._df.copy()
+            if (data[self.name_column] in set(_df[self.name_column])) and overwrite:
+                _df.loc[_df[self.name_column] == data[self.name_column]] = row
+                self._df = _df.dropna()
             else:
-                self._df = pd.concat([self._df, row], ignore_index=True)
+                self._df = pd.concat([_df, row], ignore_index=True)
         else:
             raise DFCatalogValidationError(
                 f"metadata must include the following keys to be added to this DF catalog: {self.metadata_columns}. "
