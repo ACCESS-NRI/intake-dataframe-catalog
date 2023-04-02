@@ -32,7 +32,7 @@ class DFCatalogModel:
     def __init__(
         self,
         yaml_column: str = "yaml",
-        name_column: str = "name",
+        name_column: str = "subcatalog",
         metadata_columns: list[str] = None,
     ):
         """
@@ -62,7 +62,7 @@ class DFCatalogModel:
         cls,
         path: str,
         yaml_column: str = "yaml",
-        name_column: str = "name",
+        name_column: str = "subcatalog",
         storage_options: dict[str, typing.Any] = None,
         **kwargs: dict[str, typing.Any],
     ) -> "DFCatalogModel":
@@ -108,7 +108,7 @@ class DFCatalogModel:
         entries: dict[list, typing.Any],
         cat_key: str,
         yaml_column: str = "yaml",
-        name_column: str = "name",
+        name_column: str = "subcatalog",
     ) -> "DFCatalogModel":
         """
         Create a DF catalog from the given set of entries in dictionary format.
@@ -366,7 +366,7 @@ class DFFileCatalog(Catalog):
         self,
         path: str = None,
         yaml_column: str = "yaml",
-        name_column: str = "name",
+        name_column: str = "subcatalog",
         storage_options: dict[str, typing.Any] = None,
         read_kwargs: dict[str, typing.Any] = None,
         **intake_kwargs: dict[str, typing.Any],
@@ -451,7 +451,51 @@ class DFFileCatalog(Catalog):
             ) from e
 
     def __repr__(self) -> str:
-        return f"<Dataframe catalog with {len(self)} sub-catalogs(s) and {len(self.df)} rows>"
+        return f"<{self.name or 'Dataframe'} catalog with {len(self)} subcatalogs(s) across {len(self.dfcat.df)} rows>"
+
+    def _repr_html_(self) -> str:
+        """
+        Return an html summary for the catalog object. Mainly for IPython notebook
+        """
+
+        def _list_unique(series):
+            uniques = sorted(
+                set(
+                    series.drop_duplicates()
+                    .apply(
+                        lambda x: x
+                        if series.name in self.dfcat.columns_with_iterables
+                        else [x]
+                    )
+                    .sum()
+                )
+            )
+            return uniques[0] if len(uniques) == 1 else uniques
+
+        df_summary = self.dfcat.df.groupby(self.name_column).agg(
+            {
+                col: _list_unique
+                for col in self.dfcat.df.columns.drop(
+                    [self.name_column, self.yaml_column]
+                )
+            }
+        )
+
+        text = df_summary._repr_html_()
+
+        return (
+            f"<p><strong>{self.name or 'Dataframe'} catalog with {len(self)} subcatalogs(s) across "
+            f"{len(self.dfcat.df)} rows</strong>:</p> {text}"
+        )
+
+    def _ipython_display_(self):
+        """
+        Display the entry as a rich object in an IPython session
+        """
+        from IPython.display import HTML, display
+
+        contents = self._repr_html_()
+        display(HTML(contents))
 
     def to_subcatalog_dict(
         self, **kwargs: dict[str, typing.Any]
@@ -560,13 +604,6 @@ class DFFileCatalog(Catalog):
         cat.dfcat._df = dfcat_results
 
         return cat
-
-    @property
-    def df(self) -> pd.DataFrame:
-        """
-        Return :py:class:`~pandas.DataFrame` representation of the catalog.
-        """
-        return self.dfcat.df
 
     def keys(self) -> list[str]:
         """
