@@ -17,6 +17,8 @@ from intake.catalog.local import LocalCatalogEntry
 from . import __version__
 from ._search import search, search_apply_require_all_on
 
+pd.set_option("display.max_colwidth", 300)
+
 
 class DFCatalogValidationError(Exception):
     pass
@@ -395,11 +397,12 @@ class DFFileCatalog(Catalog):
         self.name_column = name_column
         self.storage_options = storage_options or {}
         self._read_kwargs = read_kwargs or {}
+        self._intake_kwargs = intake_kwargs or {}
 
         self._entries = {}
         self.dfcat = DFCatalogModel(self.yaml_column, self.name_column)
 
-        super().__init__(**intake_kwargs)
+        super().__init__(**self._intake_kwargs)
 
     def _load(self) -> None:
         """
@@ -600,7 +603,11 @@ class DFFileCatalog(Catalog):
 
         dfcat_results = self.dfcat.search(require_all, **query)
 
-        cat = self.__class__()
+        cat = self.__class__(
+            yaml_column=self.yaml_column,
+            name_column=self.name_column,
+            **self._intake_kwargs,
+        )
         cat.dfcat._df = dfcat_results
 
         return cat
