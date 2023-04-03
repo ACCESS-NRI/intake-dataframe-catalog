@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import ast
 import tlz
 import typing
 import warnings
@@ -17,7 +18,7 @@ from intake.catalog.local import LocalCatalogEntry
 from . import __version__
 from ._search import search, search_apply_require_all_on
 
-pd.set_option("display.max_colwidth", 300)
+pd.set_option("display.max_colwidth", 200)
 
 
 class DFCatalogValidationError(Exception):
@@ -97,7 +98,9 @@ class DFCatalogModel:
         with fsspec.open(path, **storage_options) as fobj:
             df = pd.read_csv(fobj, **kwargs)
 
-        metadata_columns = list(set(df.columns) - set([yaml_column, name_column]))
+        metadata_columns = list(df.columns)  # Preserve column order
+        metadata_columns.remove(yaml_column)
+        metadata_columns.remove(name_column)
         cat = cls(yaml_column, name_column, metadata_columns)
         cat._df = df
         cat.validate()
@@ -371,6 +374,7 @@ class DFFileCatalog(Catalog):
         path: str = None,
         yaml_column: str = "yaml",
         name_column: str = "subcatalog",
+        columns_with_iterables: list[str] = None,
         storage_options: dict[str, typing.Any] = None,
         read_kwargs: dict[str, typing.Any] = None,
         **intake_kwargs: dict[str, typing.Any],
@@ -385,10 +389,14 @@ class DFFileCatalog(Catalog):
             catalogs.
         name_column: str, optional
             Name of the column in the tabular file containing the names of the intake catalogs.
+        columns_with_iterables : list of str, optional
+            A list of columns in the tabular file containing iterables. Values in columns specified here will be
+            converted with `ast.literal_eval` when :py:func:`~pandas.read_csv` is called (i.e., this is a
+            shortcut to passing converters to `read_kwargs`).
         storage_options : dict, optional
             Any parameters that need to be passed to the remote data backend, such as credentials.
         read_kwargs : dict, optional
-            Additional keyword arguments passed to :py:func:`~pd.DataFrame.read_csv` when reading from
+            Additional keyword arguments passed to :py:func:`~pandas.read_csv` when reading from
             the DFFileCatalog.
         intake_kwargs : dict, optional
             Additional keyword arguments to pass to the :py:class:`~intake.catalog.Catalog` base class.
@@ -398,7 +406,19 @@ class DFFileCatalog(Catalog):
         self.yaml_column = yaml_column
         self.name_column = name_column
         self.storage_options = storage_options or {}
-        self._read_kwargs = read_kwargs or {}
+
+        read_kwargs = read_kwargs or {}
+        if columns_with_iterables:
+            converter = ast.literal_eval
+            read_kwargs.setdefault("converters", {})
+            for col in columns_with_iterables:
+                if read_kwargs["converters"].setdefault(col, converter) != converter:
+                    raise ValueError(
+                        f"Cannot provide converter for '{col}' via `read_kwargs` when '{col}' is also specified "
+                        "in `columns_with_iterables`"
+                    )
+        self._read_kwargs = read_kwargs
+
         self._intake_kwargs = intake_kwargs or {}
 
         self._entries = {}
@@ -456,7 +476,10 @@ class DFFileCatalog(Catalog):
             ) from e
 
     def __repr__(self) -> str:
-        return f"<{self.name or 'Dataframe'} catalog with {len(self)} subcatalog(s) across {len(self.dfcat.df)} rows>"
+        return (
+            f"<{self.name or 'Intake-dataframe'} catalog with {len(self)} subcatalog(s) across "
+            f"{len(self.dfcat.df)} rows>"
+        )
 
     def _repr_html_(self) -> str:
         """
@@ -489,7 +512,7 @@ class DFFileCatalog(Catalog):
         text = df_summary._repr_html_()
 
         return (
-            f"<p><strong>{self.name or 'Dataframe'} catalog with {len(self)} subcatalog(s) across "
+            f"<p><strong>{self.name or 'Intake-dataframe'} catalog with {len(self)} subcatalog(s) across "
             f"{len(self.dfcat.df)} rows</strong>:</p> {text}"
         )
 
