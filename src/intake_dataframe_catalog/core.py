@@ -454,7 +454,7 @@ class DFFileCatalog(Catalog):
             ) from e
 
     def __repr__(self) -> str:
-        return f"<{self.name or 'Dataframe'} catalog with {len(self)} subcatalogs(s) across {len(self.dfcat.df)} rows>"
+        return f"<{self.name or 'Dataframe'} catalog with {len(self)} subcatalog(s) across {len(self.dfcat.df)} rows>"
 
     def _repr_html_(self) -> str:
         """
@@ -487,7 +487,7 @@ class DFFileCatalog(Catalog):
         text = df_summary._repr_html_()
 
         return (
-            f"<p><strong>{self.name or 'Dataframe'} catalog with {len(self)} subcatalogs(s) across "
+            f"<p><strong>{self.name or 'Dataframe'} catalog with {len(self)} subcatalog(s) across "
             f"{len(self.dfcat.df)} rows</strong>:</p> {text}"
         )
 
