@@ -223,12 +223,11 @@ class DFCatalogModel:
         if set(self.columns) == set(row.columns):
             _df = self._df.copy()
             if (data[self.name_column] in set(_df[self.name_column])) and overwrite:
-                _df.loc[_df[self.name_column] == data[self.name_column]] = row[
-                    self.columns
-                ]
-                self._df = _df.dropna()
-            else:
-                self._df = pd.concat([_df, row], ignore_index=True)
+                _df.drop(
+                    _df[_df[self.name_column] == data[self.name_column]].index,
+                    inplace=True,
+                )
+            self._df = pd.concat([_df, row], ignore_index=True)
         else:
             raise DFCatalogValidationError(
                 f"metadata must include the following keys to be added to this DF catalog: {self.metadata_columns}. "
