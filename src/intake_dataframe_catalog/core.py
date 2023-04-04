@@ -19,6 +19,7 @@ from . import __version__
 from ._search import search, search_apply_require_all_on
 
 pd.set_option("display.max_colwidth", 200)
+pd.set_option("display.max_rows", 8)
 
 
 class DFCatalogValidationError(Exception):
