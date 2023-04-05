@@ -1,7 +1,6 @@
 # Copyright 2023 ACCESS-NRI and contributors. See the top-level COPYRIGHT file for details.
 # SPDX-License-Identifier: Apache-2.0
 
-import os
 import ast
 import tlz
 import typing
@@ -152,7 +151,6 @@ class DFCatalogModel:
     def save(
         self,
         name: str,
-        directory: str = None,
         storage_options: dict[str, typing.Any] = None,
         **kwargs: dict[str, typing.Any],
     ) -> None:
@@ -162,34 +160,19 @@ class DFCatalogModel:
         Parameters
         ----------
         name: str
-            Name of the DF catalog file.
-        directory: str
-            The directory or cloud storage bucket to save the DF catalog to. If None, use the
-            current directory.
+            The path to the DF catalog file.
         storage_options: dict, optional
             Any parameters that need to be passed to the remote data backend, such as credentials.
         kwargs: dict, optional
             Additional keyword arguments passed to :py:func:`~pandas.DataFrame.to_csv`.
         """
 
-        if directory is None:
-            directory = os.getcwd()
-
-        mapper = fsspec.get_mapper(f"{directory}", storage_options=storage_options)
+        mapper = fsspec.get_mapper(f"{name}", storage_options=storage_options)
         fs = mapper.fs
-        fname = f"{mapper.fs.protocol}://{mapper.root}/{name}.csv"
+        fname = f"{mapper.fs.protocol}://{name}"
 
         csv_kwargs = {"index": False}
         csv_kwargs.update(kwargs or {})
-        compression = csv_kwargs.get("compression")
-        extensions = {
-            "gzip": ".gz",
-            "bz2": ".bz2",
-            "zip": ".zip",
-            "xz": ".xz",
-            None: "",
-        }
-        fname = f"{fname}{extensions[compression]}"
 
         with fs.open(fname, "wb") as fobj:
             self.df.to_csv(fobj, **csv_kwargs)
