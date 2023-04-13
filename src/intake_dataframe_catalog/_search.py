@@ -3,6 +3,7 @@
 
 # Stolen and adapted from https://github.com/intake/intake-esm/blob/main/intake_esm/_search.py
 
+import re
 import itertools
 import typing
 
@@ -56,6 +57,22 @@ def is_pattern(value: typing.Union[str, typing.Pattern]) -> bool:
         return False
 
 
+def _match_iterables(strings, pattern, regex):
+    """
+    Given a list of strings, return all that match the provided pattern
+    If none match, return None
+    """
+    matches = []
+    for string in strings:
+        if regex:
+            match = re.match(pattern, string, flags=0)
+        else:
+            match = pattern == string
+        if match:
+            matches.append(string)
+    return matches
+
+
 def search(
     df: pd.DataFrame, query: dict[str, typing.Any], columns_with_iterables: set
 ) -> pd.DataFrame:
@@ -86,15 +103,30 @@ def search(
             df[column].dtype, (object, pd.core.arrays.string_.StringDtype)
         )
         column_has_iterables = column in columns_with_iterables
+
+        if column_has_iterables:
+            matched_iterables = pd.Series(np.empty((len(df), 0)).tolist(), name=column)
+
         for value in values:
             if column_has_iterables:
-                mask = df[column].str.contains(value, regex=False)
+                matched = df[column].apply(
+                    lambda iters: _match_iterables(iters, value, is_pattern(value))
+                )
+                mask = matched.astype(bool)
+                matched_iterables += matched
             elif column_is_stringtype and is_pattern(value):
                 mask = df[column].str.contains(value, regex=True, case=True, flags=0)
             else:
                 mask = df[column] == value
             local_mask = local_mask | mask
+
+        if column_has_iterables:
+            df.loc[
+                matched_iterables.loc[local_mask].index, column
+            ] = matched_iterables.loc[local_mask]
+
         global_mask = global_mask & local_mask
+
     results = df.loc[global_mask]
     return results.reset_index(drop=True)
 
