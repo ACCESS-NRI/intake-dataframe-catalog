@@ -35,7 +35,7 @@ class DFCatalogModel:
     def __init__(
         self,
         yaml_column: str = "yaml",
-        name_column: str = "subcatalog",
+        name_column: str = "name",
         metadata_columns: list[str] = None,
     ):
         """
@@ -65,7 +65,7 @@ class DFCatalogModel:
         cls,
         path: str,
         yaml_column: str = "yaml",
-        name_column: str = "subcatalog",
+        name_column: str = "name",
         storage_options: dict[str, typing.Any] = None,
         **kwargs: dict[str, typing.Any],
     ) -> "DFCatalogModel":
@@ -113,7 +113,7 @@ class DFCatalogModel:
         entries: dict[list, typing.Any],
         cat_key: str,
         yaml_column: str = "yaml",
-        name_column: str = "subcatalog",
+        name_column: str = "name",
     ) -> "DFCatalogModel":
         """
         Create a DF catalog from the given set of entries in dictionary format.
@@ -356,7 +356,7 @@ class DFFileCatalog(Catalog):
         self,
         path: str = None,
         yaml_column: str = "yaml",
-        name_column: str = "subcatalog",
+        name_column: str = "name",
         columns_with_iterables: list[str] = None,
         storage_options: dict[str, typing.Any] = None,
         read_kwargs: dict[str, typing.Any] = None,
