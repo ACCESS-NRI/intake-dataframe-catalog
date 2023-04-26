@@ -214,11 +214,10 @@ class DfFileCatalog(Catalog):
                 values = tlz.concat(values)
             return list(tlz.unique(values))
 
-        data = self.df[self.df.columns]
-        if data.empty:
-            return {col: [] for col in self.df.columns}
+        if self.df.empty:
+            return {col: [] for col in self.columns}
         else:
-            return data.apply(_find_unique, result_type="reduce").to_dict()
+            return self.df.apply(_find_unique, result_type="reduce").to_dict()
 
     def unique(self) -> pd.Series:
         """
@@ -255,7 +254,7 @@ class DfFileCatalog(Catalog):
         """
 
         metadata = metadata or {}
-        metadata_keys = metadata.keys()
+        metadata_keys = list(metadata.keys())
 
         if self.name_column in metadata:
             cat.name = metadata[self.name_column]
@@ -273,18 +272,24 @@ class DfFileCatalog(Catalog):
         row = pd.DataFrame({k: 0 for k in metadata.keys()}, index=[0])
         row.iloc[0] = pd.Series(metadata)
 
-        if set(self.columns) == set(row.columns):
-            if (
-                metadata[self.name_column] in self.df[self.name_column].unique()
-            ) and overwrite:
-                self.remove(entry=metadata[self.name_column])
-
-            self._df = pd.concat([self._df, row], ignore_index=True)
+        if self.df.empty:
+            self._df = row
         else:
-            raise DfFileCatalogError(
-                f"metadata must include the following keys to be added to this DF catalog: {self.metadata_columns}. "
-                f"You passed a dictionary with the following keys: {list(metadata_keys)}"
-            )
+            if set(self.columns) == set(row.columns):
+                if (
+                    metadata[self.name_column] in self.df[self.name_column].unique()
+                ) and overwrite:
+                    self.remove(entry=metadata[self.name_column])
+
+                self._df = pd.concat([self._df, row], ignore_index=True)
+            else:
+                metadata_columns = self.columns
+                metadata_columns.remove(self.name_column)
+                metadata_columns.remove(self.yaml_column)
+                raise DfFileCatalogError(
+                    f"metadata must include the following keys to be added to this DF catalog: {metadata_columns}. "
+                    f"You passed a dictionary with the following keys: {metadata_keys}"
+                )
 
     def remove(self, entry: str) -> None:
         """
@@ -499,9 +504,7 @@ class DfFileCatalog(Catalog):
             self._df_summary = self.df.groupby(self.name_column).agg(
                 {
                     col: _list_unique
-                    for col in self.df.columns.drop(
-                        [self.name_column, self.yaml_column]
-                    )
+                    for col in self.columns.drop([self.name_column, self.yaml_column])
                 }
             )
 
