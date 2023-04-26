@@ -22,7 +22,7 @@ setup(
     ],
     entry_points={
         "intake.drivers": [
-            "df_catalog = intake_dataframe_catalog.core:DFFileCatalog",
+            "df_catalog = intake_dataframe_catalog.core:DfFileCatalog",
         ]
     },
 )
