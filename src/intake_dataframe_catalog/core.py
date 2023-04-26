@@ -504,7 +504,9 @@ class DfFileCatalog(Catalog):
             self._df_summary = self.df.groupby(self.name_column).agg(
                 {
                     col: _list_unique
-                    for col in self.columns.drop([self.name_column, self.yaml_column])
+                    for col in self.df.columns.drop(
+                        [self.name_column, self.yaml_column]
+                    )
                 }
             )
 
