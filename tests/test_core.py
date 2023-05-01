@@ -6,11 +6,11 @@ from intake_dataframe_catalog.core import DfFileCatalog
 
 
 @pytest.mark.parametrize("mode", ["r", "a", "r+"])
-def test_load(datadir, mode):
+def test_load(data_path, mode):
     """
     Test loading table from a file
     """
-    path = datadir / "dfcat.csv"
+    path = data_path / "dfcat.csv"
 
     cat = DfFileCatalog(
         path=path,

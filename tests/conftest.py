@@ -4,13 +4,15 @@ from pytest import fixture
 
 
 @fixture(scope="session")
-def datadir(tmp_path_factory):
+def data_path(tmp_path_factory):
     """
-    Fixture for moving the contents of testdata to a temporary directory
+    Fixture for moving the contents of test/data to a temporary directory
     """
 
-    tmpdir = tmp_path_factory.mktemp("data")
-    datadir = os.path.join(os.path.dirname(__file__), "data")
-    dir_util.copy_tree(datadir, str(tmpdir))
+    tmp_path = tmp_path_factory.mktemp("data")
+    data_path = os.path.join(os.path.dirname(__file__), "data")
+    dir_util.copy_tree(data_path, str(tmp_path))
+    for f in os.walk(tmp_path):
+        print(f)
 
-    return tmpdir
+    return tmp_path
