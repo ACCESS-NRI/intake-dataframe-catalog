@@ -3,14 +3,15 @@ from distutils import dir_util
 from pytest import fixture
 
 
-@fixture
-def datadir(tmpdir, request):
+@fixture(scope="session")
+def datadir(tmp_path_factory):
     """
     Fixture for moving the contents of testdata to a temporary directory
     """
-    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
+    tmpdir = tmp_path_factory.mktemp("data")
+    datadir = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
 
-    if os.path.isdir(data_dir):
-        dir_util.copy_tree(data_dir, str(tmpdir))
+    if os.path.isdir(datadir):
+        dir_util.copy_tree(datadir, str(tmpdir))
 
     return tmpdir
