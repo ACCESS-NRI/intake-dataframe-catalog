@@ -34,7 +34,7 @@ jobs:
 
       - name: Run tests
         shell: bash -l {0}
-        run: python -m pytest .
+        run: python -m pytest -s .
 
       - name: Upload code coverage
         uses: codecov/codecov-action@v1
