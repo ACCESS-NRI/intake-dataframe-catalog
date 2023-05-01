@@ -21,7 +21,7 @@ jobs:
           miniconda-version: "latest"
           python-version: ${{ matrix.python-version }}
           environment-file: ci/environment-${{ matrix.python-version }}.yml
-          activate-environment: morte-test
+          activate-environment: intake-df-cat-test
           auto-activate-base: false
 
       - name: Install
