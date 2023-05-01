@@ -1,0 +1,47 @@
+category,variable,name,yaml
+foo,"['First name', 'Last name']",csv_source,"sources:
+  csv_source:
+    args:
+      urlpath: ./tests/data/source/csv_source.csv
+    description: ''
+    driver: intake.source.csv.CSVSource
+    metadata: {}
+"
+bar,[None],textfile_source,"sources:
+  textfile_source:
+    args:
+      urlpath: ./tests/data/source/textfile_source.txt
+    description: ''
+    driver: intake.source.textfiles.TextFilesSource
+    metadata: {}
+"
+foo,"['SHF', 'REGION_MASK', 'ANGLE', 'DXU', 'KMT', 'NO2', 'O2']",esm_source,"sources:
+  esm_source:
+    args:
+      columns_with_iterables:
+      - variable
+      obj: /g/data/tm70/ds0092/software/intake-dataframe-catalog/tests/data/source/esm_source.json
+    description: ''
+    driver: intake_esm.core.esm_datastore
+    metadata: {}
+"
+bar,"['SHF', 'REGION_MASK', 'ANGLE', 'DXU', 'KMT', 'NO2', 'PO4']",esm_source,"sources:
+  esm_source:
+    args:
+      columns_with_iterables:
+      - variable
+      obj: /g/data/tm70/ds0092/software/intake-dataframe-catalog/tests/data/source/esm_source.json
+    description: ''
+    driver: intake_esm.core.esm_datastore
+    metadata: {}
+"
+baz,"['SHF', 'REGION_MASK', 'ANGLE', 'DXU', 'KMT', 'TEMP', 'SiO3']",esm_source,"sources:
+  esm_source:
+    args:
+      columns_with_iterables:
+      - variable
+      obj: /g/data/tm70/ds0092/software/intake-dataframe-catalog/tests/data/source/esm_source.json
+    description: ''
+    driver: intake_esm.core.esm_datastore
+    metadata: {}
+"
