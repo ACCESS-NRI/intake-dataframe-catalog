@@ -96,7 +96,7 @@ class DfFileCatalog(Catalog):
         self._read_kwargs = read_kwargs
 
         self._entries = {}
-        self._df = pd.DataFrame(list())
+        self._df = pd.DataFrame(columns=[self.name_column, self.yaml_column])
         self._df_summary = None
 
         self._allow_write = False
@@ -214,7 +214,7 @@ class DfFileCatalog(Catalog):
                 values = tlz.concat(values)
             return list(tlz.unique(values))
 
-        if self.df.empty:
+        if self._df.empty:
             return {col: [] for col in self.columns}
         else:
             return self.df.apply(_find_unique, result_type="reduce").to_dict()
@@ -272,9 +272,18 @@ class DfFileCatalog(Catalog):
         row = pd.DataFrame({k: 0 for k in metadata.keys()}, index=[0])
         row.iloc[0] = pd.Series(metadata)
 
-        if self.df.empty:
+        if self._df.empty:
             self._df = row
         else:
+            # Check that new entries contain iterables when they should
+            entry_iterable_columns = _columns_with_iterables(row)
+            if entry_iterable_columns != self.columns_with_iterables:
+                raise DfFileCatalogError(
+                    f"Cannot add entry with iterable metadata columns: {entry_iterable_columns} "
+                    f"to DF catalog with iterable metadata columns: {self.columns_with_iterables}. "
+                    " Please ensure that metadata entries are consistent."
+                )
+
             if set(self.columns) == set(row.columns):
                 if (
                     metadata[self.name_column] in self.df[self.name_column].unique()
@@ -290,6 +299,9 @@ class DfFileCatalog(Catalog):
                     f"metadata must include the following keys to be added to this DF catalog: {metadata_columns}. "
                     f"You passed a dictionary with the following keys: {metadata_keys}"
                 )
+
+        # Force recompute df_summary
+        self._df_summary = None
 
     def remove(self, entry: str) -> None:
         """
@@ -310,6 +322,9 @@ class DfFileCatalog(Catalog):
             raise ValueError(
                 f"'{entry}' is not an entry in the '{self.name_column}' column of the DF catalog"
             )
+
+        # Force recompute df_summary
+        self._df_summary = None
 
     def search(self, require_all: bool = False, **query: typing.Any) -> pd.DataFrame:
         """
@@ -465,18 +480,11 @@ class DfFileCatalog(Catalog):
 
         if self._columns_with_iterables is None:
             if self._df.empty:
-                return set()
-            has_iterables = (
-                self._df.sample(20, replace=True)
-                .applymap(type)
-                .isin([list, tuple, set])
-                .any()
-                .to_dict()
-            )
+                return list()
 
-            self._columns_with_iterables = [
-                column for column, check in has_iterables.items() if check
-            ]
+            self._columns_with_iterables = _columns_with_iterables(
+                self._df, sample=True
+            )
 
         return self._columns_with_iterables
 
@@ -491,16 +499,20 @@ class DfFileCatalog(Catalog):
                 set(
                     series.drop_duplicates()
                     .apply(
-                        lambda x: x
+                        lambda x: list(x)
                         if series.name in self.columns_with_iterables
-                        else [x]
+                        else [
+                            x,
+                        ]
                     )
                     .sum()
                 )
             )
             return uniques[0] if len(uniques) == 1 else uniques
 
-        if self._df_summary is None:
+        if self._df.empty:
+            self._df_summary = self.df.drop(columns=self.yaml_column)
+        elif self._df_summary is None:
             self._df_summary = self.df.groupby(self.name_column).agg(
                 {
                     col: _list_unique
@@ -511,3 +523,16 @@ class DfFileCatalog(Catalog):
             )
 
         return self._df_summary
+
+
+def _columns_with_iterables(df, sample=False):
+    """
+    Return a list of the columns in the provided pandas dataframe/series that have iterables.
+    Stolen from https://github.com/intake/intake-esm/blob/main/intake_esm/cat.py#L277
+    """
+
+    _df = df.sample(20, replace=True) if sample else df
+
+    has_iterables = _df.applymap(type).isin([list, tuple, set]).any().to_dict()
+
+    return [col for col, check in has_iterables.items() if check]
