@@ -1,0 +1,11 @@
+name: intake-df-cat-test
+channels:
+  - conda-forge
+dependencies:
+  - intake
+  - pytest
+  - python=3.9
+  - pip
+  - pip:
+    - codecov
+    - pytest-cov
