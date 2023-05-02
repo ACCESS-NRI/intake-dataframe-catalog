@@ -155,7 +155,7 @@ class DfFileCatalog(Catalog):
                 ).get()
                 return self._entries[key]
             raise KeyError(
-                f"key={key} not found in catalog. You can access the list of valid keys via the .keys() method."
+                f"key='{key}' not found in catalog. You can access the list of valid keys via the .keys() method."
             ) from e
 
     def __repr__(self) -> str:
@@ -324,6 +324,10 @@ class DfFileCatalog(Catalog):
                 f"'{entry}' is not an entry in the '{self.name_column}' column of the DF catalog"
             )
 
+        # Drop metadata columns if there are no entries
+        if self._df.empty:
+            self._df = self._df[[self.name_column, self.yaml_column]]
+
         # Force recompute df_summary
         self._df_summary = None
 
@@ -350,7 +354,7 @@ class DfFileCatalog(Catalog):
 
         for key, value in query.items():
             if key not in columns:
-                raise ValueError(f"Column {key} not in columns {columns}")
+                raise ValueError(f"Column '{key}' not in columns {columns}")
             if not isinstance(query[key], list):
                 query[key] = [query[key]]
 
@@ -528,7 +532,9 @@ class DfFileCatalog(Catalog):
             return uniques[0] if len(uniques) == 1 else uniques
 
         if self._df.empty:
-            self._df_summary = self.df.drop(columns=self.yaml_column)
+            self._df_summary = self.df.set_index(self.name_column).drop(
+                columns=self.yaml_column
+            )
         elif self._df_summary is None:
             self._df_summary = self.df.groupby(self.name_column).agg(
                 {

@@ -4,10 +4,11 @@ from io import UnsupportedOperation
 import pytest
 
 import xarray as xr
+import pandas as pd
+
 import intake
 from intake.source.csv import CSVSource
 from intake_esm.core import esm_datastore
-import pandas as pd
 
 from intake_dataframe_catalog.core import DfFileCatalog, DfFileCatalogError
 
@@ -25,8 +26,9 @@ def test_load(catalog_path, mode, kwargs):
     _assert_DfFileCatalog(cat)
 
     if mode == "r":
-        with pytest.raises(UnsupportedOperation):
+        with pytest.raises(UnsupportedOperation) as excinfo:
             cat.save()
+        assert "Cannot save catalog initialised with mode='r'" in str(excinfo.value)
 
 
 def test_create_w(catalog_path, source_path):
@@ -104,12 +106,13 @@ def test_read_csv_conflict(catalog_path):
     )
 
     # Fails on conflict
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as excinfo:
         intake.open_df_catalog(
             str(catalog_path / "dfcat.csv"),
             read_kwargs={"converters": {"variable": lambda x: x}},
             columns_with_iterables=["variable"],
         )
+    assert "Cannot provide converter" in str(excinfo.value)
 
 
 def test_catalog_unique(catalog_path):
@@ -141,7 +144,7 @@ def test_catalog_contains(catalog_path):
     assert "foo" not in cat
 
 
-def test_keys(catalog_path):
+def test_catalog_keys(catalog_path):
     """
     Test keys method
     """
@@ -186,7 +189,21 @@ def test_catalog_search(catalog_path, query, require_all, expected_len):
         assert all(var in query["variable"] for var in new_cat.df.variable.sum())
 
 
-def test_add(catalog_path, source_path):
+def test_bad_search(catalog_path):
+    """
+    Test search on non-existent column
+    """
+    cat = intake.open_df_catalog(
+        str(catalog_path / "dfcat.csv"),
+        columns_with_iterables=["variable"],
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        cat.search(foo="bar")
+    assert "Column 'foo' not in columns" in str(excinfo.value)
+
+
+def test_catalog_add(catalog_path, source_path):
     """
     Test adding subcatalogs to the catalog
     """
@@ -195,8 +212,9 @@ def test_add(catalog_path, source_path):
     gistemp = intake.open_csv(str(source_path / "gistemp.csv"))
     gistemp.name = None
 
-    with pytest.raises(DfFileCatalogError):
+    with pytest.raises(DfFileCatalogError) as excinfo:
         cat.add(gistemp, metadata={"realm": "atmos", "variable": ["tas"]})
+    assert "Cannot add an unnamed catalog to the DF catalog" in str(excinfo.value)
 
     gistemp.name = "gistemp"
     cat.add(gistemp, metadata={"realm": "atmos", "variable": ["tas"]})
@@ -211,12 +229,16 @@ def test_add(catalog_path, source_path):
     assert len(cat) == 1
     assert len(cat.df) == 1
 
-    with pytest.raises(DfFileCatalogError):
+    with pytest.raises(DfFileCatalogError) as excinfo:
         cat.add(gistemp, metadata={"realm": "atmos", "variable": "tas"})
-        cat.add(gistemp, metadata={"realm": "atmos", "foo": ["tas"]})
+    assert "Cannot add entry with iterable metadata columns" in str(excinfo.value)
+
+    with pytest.raises(DfFileCatalogError) as excinfo:
+        cat.add(gistemp, metadata={"foo": "bar", "variable": ["tas"]})
+    assert "metadata must include the following keys" in str(excinfo.value)
 
 
-def test_remove(catalog_path):
+def test_catalog_remove(catalog_path):
     """
     Test removing subcatalogs from the catalog
     """
@@ -227,11 +249,12 @@ def test_remove(catalog_path):
     cat.remove("gistemp")
     assert "gistemp" not in cat
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as excinfo:
         cat.remove("foo")
+    assert "'foo' is not an entry" in str(excinfo.value)
 
 
-def test_add_remove(catalog_path, source_path):
+def test_catalog_add_remove(catalog_path, source_path):
     """
     Test adding and removing subcatalogs to the catalog
     """
@@ -288,8 +311,9 @@ def test_catalog_getitem(catalog_path, key, expected):
         entry = cat[key]
         assert isinstance(entry, expected)
     else:
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError) as excinfo:
             cat[key]
+        assert f"key='{key}' not found in catalog" in str(excinfo.value)
 
     # As attribute
     if expected:
@@ -369,8 +393,9 @@ def test_to_subcatalog(catalog_path, kwargs):
         mode="a",
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as excinfo:
         cat.to_subcatalog(**kwargs)
+    assert "Expected exactly one subcatalog" in str(excinfo.value)
 
     cat.to_subcatalog_dict(**kwargs)
 
@@ -378,7 +403,7 @@ def test_to_subcatalog(catalog_path, kwargs):
     cat_new.to_subcatalog(**kwargs)
 
 
-def test_empty(catalog_path):
+def test_empty_catalog(catalog_path):
     """
     Test warning when trying to load subcatalog from empty catalog
     """
@@ -392,7 +417,7 @@ def test_empty(catalog_path):
         assert not subcats
 
 
-def test_read_subcat(catalog_path):
+def test_read_subcatalog(catalog_path):
     """
     Test reading data from subcatalogs
     """
@@ -417,6 +442,110 @@ def test_read_subcat(catalog_path):
             xarray_open_kwargs={"chunks": {}}, progressbar=False
         )
     assert len(x) == len(cat.cmip5)
+
+
+@pytest.mark.parametrize(
+    "metadata, expected_dict",
+    [
+        (
+            [
+                {"meta0": "a", "meta1": "b"},
+                {"meta0": "b", "meta1": "c"},
+            ],
+            {"columns": ["meta0", "meta1"], "data": [[["a", "b"], ["b", "c"]]]},
+        ),
+        (
+            [
+                {
+                    "meta0": "a",
+                    "meta1": [
+                        "b",
+                    ],
+                },
+                {
+                    "meta0": "a",
+                    "meta1": [
+                        "c",
+                    ],
+                },
+            ],
+            {"columns": ["meta0", "meta1"], "data": [["a", ["b", "c"]]]},
+        ),
+        (
+            [
+                {"meta0": 0, "meta1": ("b",)},
+                {"meta0": 1, "meta1": ("b",)},
+            ],
+            {"columns": ["meta0", "meta1"], "data": [[[0, 1], "b"]]},
+        ),
+        (
+            [
+                {
+                    "meta0": {
+                        1.0,
+                    },
+                    "meta1": {
+                        "b",
+                    },
+                },
+                {
+                    "meta0": {
+                        1.0,
+                    },
+                    "meta1": {
+                        "c",
+                    },
+                },
+            ],
+            {"columns": ["meta0", "meta1"], "data": [[1.0, ["b", "c"]]]},
+        ),
+    ],
+)
+def test_df_summary(catalog_path, source_path, metadata, expected_dict):
+    """
+    Test expected output of df_summary
+    """
+    cat = intake.open_df_catalog(
+        str(catalog_path / "tmp.csv"),
+        mode="w",
+    )
+    subcat = intake.open_csv(str(source_path / "gistemp.csv"))
+
+    for meta in metadata:
+        cat.add(subcat, metadata=meta)
+
+    assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
+
+
+def test_df_summary_update(catalog_path, source_path):
+    """
+    Test that df_summary updates correctly
+    """
+    cat = intake.open_df_catalog(
+        str(catalog_path / "tmp.csv"),
+        mode="w",
+    )
+    subcat = intake.open_csv(str(source_path / "gistemp.csv"))
+    subcat.name = "gistemp"
+
+    expected_dict = {"columns": [], "data": []}
+    assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
+
+    cat.add(subcat, metadata={"meta0": "a", "meta1": "b"})
+    expected_dict = {"columns": ["meta0", "meta1"], "data": [["a", "b"]]}
+    assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
+
+    cat.add(subcat, metadata={"meta0": "c", "meta1": "d"})
+    expected_dict = {"columns": ["meta0", "meta1"], "data": [[["a", "c"], ["b", "d"]]]}
+    assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
+
+    cat.add(subcat, metadata={"meta0": "c", "meta1": "d"}, overwrite=True)
+    expected_dict = {"columns": ["meta0", "meta1"], "data": [["c", "d"]]}
+    assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
+
+    cat.remove("gistemp")
+    expected_dict = {"columns": [], "data": []}
+    assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
 
 
 def test_subclassing_catalog(catalog_path):
