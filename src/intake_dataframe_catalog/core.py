@@ -123,6 +123,18 @@ class DfFileCatalog(Catalog):
             else:
                 with fsspec.open(self.path, **self.storage_options) as fobj:
                     self._df = pd.read_csv(fobj, **self._read_kwargs)
+                if self.yaml_column not in self.df.columns:
+                    raise DfFileCatalogError(
+                        f"'{self.yaml_column}' is not a column in the DF catalog. Please provide "
+                        "the name of the column containing intake YAML descriptions via argument "
+                        "`yaml_column`."
+                    )
+                if self.name_column not in self.df.columns:
+                    raise DfFileCatalogError(
+                        f"'{self.name_column}' is not a column in the DF catalog. Please provide "
+                        "the name of the column containing subcatalog names via argument "
+                        "`name_column`."
+                    )
 
     def __len__(self) -> int:
         return len(self.keys())

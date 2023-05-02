@@ -37,7 +37,12 @@ def test_create_w(catalog_path, source_path):
     """
 
     # Create new
-    cat = intake.open_df_catalog(path=str(catalog_path / "tmp.csv"), mode="w")
+    cat = intake.open_df_catalog(
+        path=str(catalog_path / "tmp.csv"),
+        yaml_column="foo",
+        name_column="bar",
+        mode="w",
+    )
 
     _assert_DfFileCatalog(cat, empty=True)
 
@@ -63,13 +68,44 @@ def test_create_x(catalog_path, source_path):
     Test creating a catalog with mode="x"
     """
     # Create new
-    cat = intake.open_df_catalog(path=str(catalog_path / "tmp2.csv"), mode="x")
+    cat = intake.open_df_catalog(
+        path=str(catalog_path / "tmp2.csv"),
+        yaml_column="foo",
+        name_column="bar",
+        mode="x",
+    )
 
     _assert_DfFileCatalog(cat, empty=True)
 
     # Overwrite existing
     with pytest.raises(FileExistsError):
         cat = intake.open_df_catalog(path=str(catalog_path / "dfcat.csv"), mode="x")
+
+
+def test_column_name_error(catalog_path):
+    """
+    Test that error message is thrown with yaml_column/name_column are not in catalog
+    """
+    with pytest.raises(DfFileCatalogError) as excinfo:
+        intake.open_df_catalog(
+            str(catalog_path / "dfcat.csv"),
+            yaml_column="foo",
+            mode="r",
+        )
+    assert (
+        "Please provide the name of the column containing intake YAML descriptions"
+        in str(excinfo.value)
+    )
+
+    with pytest.raises(DfFileCatalogError) as excinfo:
+        intake.open_df_catalog(
+            str(catalog_path / "dfcat.csv"),
+            name_column="bar",
+            mode="r",
+        )
+    assert "Please provide the name of the column containing subcatalog names" in str(
+        excinfo.value
+    )
 
 
 def test_columns_with_iterables(catalog_path):
@@ -339,6 +375,23 @@ def test_catalog_add_remove(catalog_path, source_path):
     cat.remove("cmip5")
     assert len(cat) == 1
     assert len(cat.df) == 1
+
+
+def test_use_metadata_name(catalog_path, source_path):
+    """
+    Test that if name is specified in the metadata it is used preferentially over
+    the catalog name
+    """
+    cat = intake.open_df_catalog(
+        str(catalog_path / "tmp.csv"),
+        mode="w",
+    )
+    subcat = intake.open_csv(str(source_path / "gistemp.csv"))
+    subcat.name = "gistemp"
+
+    cat.add(subcat, metadata={"name": "new_name"})
+    assert "new_name" in cat
+    assert "gistemp" not in cat
 
 
 @pytest.mark.parametrize(
