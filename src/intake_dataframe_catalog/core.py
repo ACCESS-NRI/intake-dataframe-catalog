@@ -222,15 +222,17 @@ class DfFileCatalog(Catalog):
 
     def unique(self) -> pd.Series:
         """
-        Return a series of unique values for each column in the DF catalog.
+        Return a series of unique values for each column in the DF catalog, excluding the
+        yaml description column.
         """
-        return pd.Series(self._unique())
+        return pd.Series(self._unique()).drop(self.yaml_column)
 
     def nunique(self) -> pd.Series:
         """
-        Return a series of the number of unique values for each column in the DF catalog.
+        Return a series of the number of unique values for each column in the DF catalog,
+        excluding the yaml description column.
         """
-        return pd.Series(tlz.valmap(len, self._unique()))
+        return pd.Series(tlz.valmap(len, self._unique())).drop(self.yaml_column)
 
     def add(
         self,

@@ -115,7 +115,55 @@ def test_read_csv_conflict(catalog_path):
     assert "Cannot provide converter" in str(excinfo.value)
 
 
-def test_catalog_unique(catalog_path):
+@pytest.mark.parametrize(
+    "query, expected_unique, expected_nunique",
+    [
+        (
+            None,
+            {
+                "realm": ["atmos", "ocean", "ocnBgchem"],
+                "variable": [
+                    "tas",
+                    "REGION_MASK",
+                    "SHF",
+                    "PO4",
+                    "NO2",
+                    "ANGLE",
+                    "DXU",
+                    "TEMP",
+                    "KMT",
+                    "O2",
+                    "SiO3",
+                    "fgco2",
+                    "hfls",
+                    "tasmax",
+                ],
+                "name": ["gistemp", "cesm", "cmip5"],
+            },
+            {"realm": 3, "variable": 14, "name": 3},
+        ),
+        (
+            {"realm": "atmos"},
+            {
+                "realm": ["atmos"],
+                "variable": ["tas", "hfls", "tasmax"],
+                "name": ["gistemp", "cmip5"],
+            },
+            {"realm": 1, "variable": 3, "name": 2},
+        ),
+        (
+            {"variable": "tas"},
+            {"realm": ["atmos"], "variable": ["tas"], "name": ["gistemp"]},
+            {"realm": 1, "variable": 1, "name": 1},
+        ),
+        (
+            {"variable": "foo"},
+            {"realm": [], "variable": [], "name": []},
+            {"realm": 0, "variable": 0, "name": 0},
+        ),
+    ],
+)
+def test_catalog_unique(catalog_path, query, expected_unique, expected_nunique):
     """
     Test unique and nunique methods
     """
@@ -123,11 +171,16 @@ def test_catalog_unique(catalog_path):
         str(catalog_path / "dfcat.csv"),
         columns_with_iterables=["variable"],
     )
-    uniques = cat.unique()
-    nuniques = cat.nunique()
-    assert isinstance(uniques, pd.Series)
-    assert isinstance(nuniques, pd.Series)
-    assert len(uniques.keys()) == len(cat.columns)
+    if query:
+        cat = cat.search(**query)
+
+    unique = cat.unique().to_dict()
+    assert unique.keys() == expected_unique.keys()
+    for key in unique.keys():
+        assert set(unique[key]) == set(expected_unique[key])
+
+    nunique = cat.nunique().to_dict()
+    assert nunique == expected_nunique
 
 
 def test_catalog_contains(catalog_path):
@@ -161,14 +214,14 @@ def test_catalog_keys(catalog_path):
 @pytest.mark.parametrize(
     "query, require_all, expected_len",
     [
-        (dict(realm="ocean"), False, 1),
-        (dict(realm=["ocean", "ocnBgchem"]), False, 2),
-        (dict(realm="atmos"), False, 2),
-        (dict(realm="atmos", variable="tas"), False, 1),
-        (dict(realm="atmos", variable=["tas"]), False, 1),
-        (dict(variable=["NO2", "tas", "fgco2"]), False, 3),
-        (dict(variable=["NO2", "tas", "fgco2"]), True, 0),
-        (dict(realm="atmos", name="cesm"), False, 0),
+        ({"realm": "ocean"}, False, 1),
+        ({"realm": ["ocean", "ocnBgchem"]}, False, 2),
+        ({"realm": "atmos"}, False, 2),
+        ({"realm": "atmos", "variable": "tas"}, False, 1),
+        ({"realm": "atmos", "variable": ["tas"]}, False, 1),
+        ({"variable": ["NO2", "tas", "fgco2"]}, False, 3),
+        ({"variable": ["NO2", "tas", "fgco2"]}, True, 0),
+        ({"realm": "atmos", "name": "cesm"}, False, 0),
         ({}, False, 0),
     ],
 )
@@ -331,8 +384,8 @@ def test_catalog_getitem(catalog_path, key, expected):
 @pytest.mark.parametrize(
     "kwargs",
     [
-        dict(compression={"method": "gzip"}),
-        dict(compression={"method": "bz2"}),
+        {"compression": {"method": "gzip"}},
+        {"compression": {"method": "bz2"}},
         {},
     ],
 )
@@ -379,7 +432,7 @@ def test_catalog_save(catalog_path, method, kwargs):
 @pytest.mark.parametrize(
     "kwargs",
     [
-        dict(storage_options={}),
+        {"storage_options": {}},
         {},
     ],
 )

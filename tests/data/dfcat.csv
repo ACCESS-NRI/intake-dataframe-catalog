@@ -7,7 +7,7 @@ atmos,['tas'],gistemp,"sources:
     driver: intake.source.csv.CSVSource
     metadata: {}
 "
-ocean,"['NO2', 'KMT', 'REGION_MASK', 'SHF', 'ANGLE', 'SiO3', 'PO4', 'O2', 'TEMP', 'DXU']",cesm,"sources:
+ocean,"['REGION_MASK', 'SHF', 'PO4', 'NO2', 'ANGLE', 'DXU', 'TEMP', 'KMT', 'O2', 'SiO3']",cesm,"sources:
   cesm:
     args:
       columns_with_iterables:
