@@ -1,5 +1,3 @@
 [run]
 omit =
-    setup.py
-    versioneer.py
-    src/intake_dataframe_catalog/_version.py
+    intake_dataframe_catalog/_version.py
