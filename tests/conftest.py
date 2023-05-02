@@ -1,18 +1,24 @@
 import os
 from distutils import dir_util
 from pytest import fixture
+from pathlib import Path
+
+here = os.path.abspath(os.path.dirname(__file__))
 
 
 @fixture(scope="session")
-def data_path(tmp_path_factory):
+def catalog_path(tmp_path_factory):
     """
     Fixture for moving the contents of test/data to a temporary directory
     """
 
     tmp_path = tmp_path_factory.mktemp("data")
-    data_path = os.path.join(os.path.dirname(__file__), "data")
-    dir_util.copy_tree(data_path, str(tmp_path))
-    for f in os.walk(tmp_path):
-        print(f)
+    cat_path = os.path.join(here, "data/catalogs")
+    dir_util.copy_tree(cat_path, str(tmp_path))
 
     return tmp_path
+
+
+@fixture
+def source_path():
+    return Path(os.path.join(here, "data/source"))

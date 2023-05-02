@@ -16,7 +16,7 @@ setup(
         "License :: OSI Approved :: Apache Software License 2.0 (Apache-2.0)",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     install_requires=[
         "intake",
     ],

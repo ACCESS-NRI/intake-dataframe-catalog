@@ -5,6 +5,7 @@ import ast
 import tlz
 import typing
 import warnings
+from io import UnsupportedOperation
 
 import yaml
 import fsspec
@@ -398,7 +399,9 @@ class DfFileCatalog(Catalog):
             with fs.open(fname, "wb") as fobj:
                 self.df.to_csv(fobj, **csv_kwargs)
         else:
-            raise ValueError(f"Cannot save catalog initialised with mode='{self.mode}'")
+            raise UnsupportedOperation(
+                f"Cannot save catalog initialised with mode='{self.mode}'"
+            )
 
     serialize = save
 

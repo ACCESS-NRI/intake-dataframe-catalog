@@ -2,7 +2,7 @@
   "esmcat_version": "0.1.0",
   "id": "sample-multi-variable-cesm1-lens",
   "description": "This is a sample ESM catalog emulating multi variable/history files for CESM1-LENS. Copied from intake-esm test suite data at https://github.com/intake/intake-esm/blob/main/tests/sample-catalogs/multi-variable-catalog.json",
-  "catalog_file": "esm_source.csv",
+  "catalog_file": "cesm.csv",
   "attributes": [
     {
       "column_name": "experiment",
