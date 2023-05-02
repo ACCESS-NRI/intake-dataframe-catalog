@@ -17,8 +17,8 @@ $ git checkout -b YOUR-BUGFIX-FEATURE-BRANCH-NAME main
 3. Install `intake-dataframe-catalog`'s dependencies into a new conda environment:
 
 ```bash
-$ conda env create -f environment-dev.yml
-$ conda activate intake-df-cat-dev
+$ conda env create -f ci/environment-3.11.yml
+$ conda activate intake-df-cat-test
 ```
 
 4. Install `intake-dataframe-catalog` using the editable flag (meaning any changes you make to the package will be reflected directly in your environment without having to reinstall):

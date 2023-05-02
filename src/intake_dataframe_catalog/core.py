@@ -84,7 +84,7 @@ class DfFileCatalog(Catalog):
         self.storage_options = storage_options or {}
         self._intake_kwargs = intake_kwargs or {}
 
-        read_kwargs = read_kwargs or {}
+        read_kwargs = read_kwargs.copy() if read_kwargs else {}
         if self._columns_with_iterables:
             converter = ast.literal_eval
             read_kwargs.setdefault("converters", {})
@@ -337,7 +337,8 @@ class DfFileCatalog(Catalog):
             A dictionary of query parameters to execute against the DF catalog.
         require_all : bool, optional
             If True, entries must satisfy all the query criteria, otherwise results that satisfy any of criteria
-            are returned.
+            are returned. For example, a query of `variable = ["a", "b"]` with `require_all = True` will return
+            only subcatalogs that contain _both_ variables "a" and "b".
 
         Returns
         -------
@@ -364,9 +365,16 @@ class DfFileCatalog(Catalog):
                 columns_with_iterables=self.columns_with_iterables,
             )
 
+        mode = "a" if self.mode in ["w", "x"] else self.mode
+
         cat = self.__class__(
+            path=self.path,
             yaml_column=self.yaml_column,
             name_column=self.name_column,
+            mode=mode,
+            columns_with_iterables=self.columns_with_iterables,
+            storage_options=self.storage_options,
+            read_kwargs=self._read_kwargs,
             **self._intake_kwargs,
         )
         cat._df = results
@@ -375,6 +383,7 @@ class DfFileCatalog(Catalog):
 
     def save(
         self,
+        path: str = None,
         **kwargs: dict[str, typing.Any],
     ) -> None:
         """
@@ -382,19 +391,24 @@ class DfFileCatalog(Catalog):
 
         Parameters
         ----------
+        path : str or None, optional
+            Location to save the catalog. If None, the path specified at initialisation
+            of the catalog is used.
         kwargs: dict, optional
             Additional keyword arguments passed to :py:func:`~pandas.DataFrame.to_csv`.
         """
 
+        save_path = path if path else self.path
+
         if self._allow_write:
             mapper = fsspec.get_mapper(
-                f"{self.path}", storage_options=self.storage_options
+                f"{save_path}", storage_options=self.storage_options
             )
             fs = mapper.fs
-            fname = f"{mapper.fs.protocol}://{self.path}"
+            fname = f"{mapper.fs.protocol}://{save_path}"
 
             csv_kwargs = {"index": False}
-            csv_kwargs.update(kwargs or {})
+            csv_kwargs.update(kwargs.copy() or {})
 
             with fs.open(fname, "wb") as fobj:
                 self.df.to_csv(fobj, **csv_kwargs)
@@ -427,7 +441,7 @@ class DfFileCatalog(Catalog):
 
         if not self.keys():
             warnings.warn(
-                "There are no subcatalogs to open! Returning an empty dictionary.",
+                "There are no subcatalogs to open. Returning an empty dictionary.",
                 UserWarning,
                 stacklevel=2,
             )

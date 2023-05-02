@@ -93,7 +93,7 @@ def search(
     dataframe: :py:class:`~pandas.DataFrame`
             A new dataframe with the entries satisfying the query criteria.
     """
-
+    df = df.copy()
     if not query:
         return pd.DataFrame(columns=df.columns)
     global_mask = np.ones(len(df), dtype=bool)
@@ -174,7 +174,7 @@ def search_apply_require_all_on(
     for _, group in grouped:
         group_for_index = group
         # Unpack iterables to get testable index.
-        for column in (columns_with_iterables or set()).intersection(keys):
+        for column in (set(columns_with_iterables) or set()).intersection(keys):
             group_for_index = unpack_iterable_column(group_for_index, column)
 
         index = group_for_index.set_index(keys).index
