@@ -251,7 +251,8 @@ def test_catalog_keys(catalog_path):
     "query, require_all, expected_len",
     [
         ({"realm": "ocean"}, False, 1),
-        ({"realm": ["ocean", "ocnBgchem"]}, False, 2),
+        ({"realm": ["atmos", "ocnBgchem"]}, False, 2),
+        ({"realm": ["atmos", "ocnBgchem"]}, True, 1),
         ({"realm": "atmos"}, False, 2),
         ({"realm": "atmos", "variable": "tas"}, False, 1),
         ({"realm": "atmos", "variable": ["tas"]}, False, 1),
@@ -272,7 +273,8 @@ def test_catalog_search(catalog_path, query, require_all, expected_len):
     new_cat = cat.search(require_all, **query)
 
     assert len(new_cat) == expected_len
-    assert cat.columns == new_cat.columns
+    if expected_len:
+        assert cat.columns == new_cat.columns
 
     if ("variable" in query) & (not require_all):
         assert all(var in query["variable"] for var in new_cat.df.variable.sum())
@@ -558,7 +560,7 @@ def test_read_subcatalog(catalog_path):
                 {"meta0": "a", "meta1": "b"},
                 {"meta0": "b", "meta1": "c"},
             ],
-            {"columns": ["meta0", "meta1"], "data": [[["a", "b"], ["b", "c"]]]},
+            {"columns": ["meta0", "meta1"], "data": [[{"a", "b"}, {"b", "c"}]]},
         ),
         (
             [
@@ -575,14 +577,14 @@ def test_read_subcatalog(catalog_path):
                     ],
                 },
             ],
-            {"columns": ["meta0", "meta1"], "data": [["a", ["b", "c"]]]},
+            {"columns": ["meta0", "meta1"], "data": [[{"a"}, {"b", "c"}]]},
         ),
         (
             [
                 {"meta0": 0, "meta1": ("b",)},
                 {"meta0": 1, "meta1": ("b",)},
             ],
-            {"columns": ["meta0", "meta1"], "data": [[[0, 1], "b"]]},
+            {"columns": ["meta0", "meta1"], "data": [[{0, 1}, {"b"}]]},
         ),
         (
             [
@@ -603,7 +605,7 @@ def test_read_subcatalog(catalog_path):
                     },
                 },
             ],
-            {"columns": ["meta0", "meta1"], "data": [[1.0, ["b", "c"]]]},
+            {"columns": ["meta0", "meta1"], "data": [[{1.0}, {"b", "c"}]]},
         ),
     ],
 )
@@ -638,15 +640,15 @@ def test_df_summary_update(catalog_path, source_path):
     assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
 
     cat.add(subcat, metadata={"meta0": "a", "meta1": "b"})
-    expected_dict = {"columns": ["meta0", "meta1"], "data": [["a", "b"]]}
+    expected_dict = {"columns": ["meta0", "meta1"], "data": [[{"a"}, {"b"}]]}
     assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
 
     cat.add(subcat, metadata={"meta0": "c", "meta1": "d"})
-    expected_dict = {"columns": ["meta0", "meta1"], "data": [[["a", "c"], ["b", "d"]]]}
+    expected_dict = {"columns": ["meta0", "meta1"], "data": [[{"a", "c"}, {"b", "d"}]]}
     assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
 
     cat.add(subcat, metadata={"meta0": "c", "meta1": "d"}, overwrite=True)
-    expected_dict = {"columns": ["meta0", "meta1"], "data": [["c", "d"]]}
+    expected_dict = {"columns": ["meta0", "meta1"], "data": [[{"c"}, {"d"}]]}
     assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
 
     cat.remove("gistemp")

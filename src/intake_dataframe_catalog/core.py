@@ -9,6 +9,7 @@ from io import UnsupportedOperation
 
 import yaml
 import fsspec
+import numpy as np
 import pandas as pd
 
 import intake
@@ -16,7 +17,7 @@ from intake.catalog import Catalog
 from intake.catalog.local import LocalCatalogEntry
 
 from . import __version__
-from ._search import search, search_apply_require_all_on
+from ._search import search
 
 pd.set_option("display.max_colwidth", 200)
 pd.set_option("display.max_rows", 8)
@@ -347,23 +348,26 @@ class DfFileCatalog(Catalog):
 
     def search(self, require_all: bool = False, **query: typing.Any) -> pd.DataFrame:
         """
-        Search for entries in the DF catalog.
+        Search for subcatalogs in the DF catalog. Multiple columns can be queried simutaneously by
+        passing multiple queries. Only subcatalogs that satisfy all column queries are returned.
+        Additionally, multiple values within a column can be queried by passing a list of values to
+        query on. By default, a column query is considered to match if any of the values are found
+        in the corresponding subcatalog metadata (see the `require_all` argument).
 
         Parameters
         ----------
         query: dict, optional
-            A dictionary of query parameters to execute against the DF catalog.
+            A dictionary of query parameters to execute against the DF catalog: {column_name: value[s]}.
         require_all : bool, optional
-            If True, entries must satisfy all the query criteria, otherwise results that satisfy any of criteria
-            are returned. For example, a query of `variable = ["a", "b"]` with `require_all = True` will return
-            only subcatalogs that contain _both_ variables "a" and "b".
+            If True, returned subcatalogs satisfy all the query criteria. For example, a query of
+            `variable = ["a", "b"]` with `require_all = True` will return only subcatalogs that
+            contain _both_ variables "a" and "b".
 
         Returns
         -------
         dataframe: :py:class:`~pandas.DataFrame`
             A new dataframe with the entries satisfying the query criteria.
         """
-
         columns = self.columns
 
         for key, value in query.items():
@@ -375,13 +379,6 @@ class DfFileCatalog(Catalog):
         results = search(
             df=self.df, query=query, columns_with_iterables=self.columns_with_iterables
         )
-        if require_all and not results.empty:
-            results = search_apply_require_all_on(
-                df=results,
-                query=query,
-                require_all_on=self.name_column,
-                columns_with_iterables=self.columns_with_iterables,
-            )
 
         mode = "a" if self.mode in ["w", "x"] else self.mode
 
@@ -396,6 +393,17 @@ class DfFileCatalog(Catalog):
             **self._intake_kwargs,
         )
         cat._df = results
+
+        if require_all and not cat._df.empty:
+            # Remove any entries that do not satisfy all queries
+            mask = np.zeros(len(cat.df_summary), dtype=bool)
+            for column, values in query.items():
+                for value in values:
+                    not_in = ~cat.df_summary[column].str.contains(value, regex=False)
+                    mask = mask | not_in
+
+            for remove in cat.df_summary.index[mask].tolist():
+                cat.remove(remove)
 
         return cat
 
@@ -530,20 +538,16 @@ class DfFileCatalog(Catalog):
         """
 
         def _list_unique(series):
-            uniques = sorted(
-                set(
-                    series.drop_duplicates()
-                    .apply(
-                        lambda x: list(x)
-                        if series.name in self.columns_with_iterables
-                        else [
-                            x,
-                        ]
-                    )
-                    .sum()
-                )
+            uniques = set(
+                series.apply(
+                    lambda x: list(x)
+                    if series.name in self.columns_with_iterables
+                    else [
+                        x,
+                    ]
+                ).sum()
             )
-            return uniques[0] if len(uniques) == 1 else uniques
+            return uniques  # uniques[0] if len(uniques) == 1 else uniques
 
         if self._df.empty:
             self._df_summary = self.df.set_index(self.name_column).drop(
