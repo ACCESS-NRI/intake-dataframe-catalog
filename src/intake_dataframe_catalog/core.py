@@ -9,7 +9,6 @@ from io import UnsupportedOperation
 
 import yaml
 import fsspec
-import numpy as np
 import pandas as pd
 
 import intake
@@ -376,34 +375,25 @@ class DfFileCatalog(Catalog):
             if not isinstance(query[key], list):
                 query[key] = [query[key]]
 
+        require_all_on = self.name_column if require_all else None
         results = search(
-            df=self.df, query=query, columns_with_iterables=self.columns_with_iterables
+            df=self.df,
+            query=query,
+            columns_with_iterables=self.columns_with_iterables,
+            require_all_on=require_all_on,
         )
 
-        mode = "a" if self.mode in ["w", "x"] else self.mode
-
         cat = self.__class__(
-            path=self.path,
             yaml_column=self.yaml_column,
             name_column=self.name_column,
-            mode=mode,
+            mode=self.mode,
             columns_with_iterables=self.columns_with_iterables,
             storage_options=self.storage_options,
             read_kwargs=self._read_kwargs,
             **self._intake_kwargs,
         )
+        cat.path = self.path
         cat._df = results
-
-        if require_all and not cat._df.empty:
-            # Remove any entries that do not satisfy all queries
-            mask = np.zeros(len(cat.df_summary), dtype=bool)
-            for column, values in query.items():
-                for value in values:
-                    not_in = ~cat.df_summary[column].str.contains(value, regex=False)
-                    mask = mask | not_in
-
-            for remove in cat.df_summary.index[mask].tolist():
-                cat.remove(remove)
 
         return cat
 

@@ -48,7 +48,10 @@ def _match_iterables(strings, pattern, regex):
 
 
 def search(
-    df: pd.DataFrame, query: dict[str, typing.Any], columns_with_iterables: set
+    df: pd.DataFrame,
+    query: dict[str, typing.Any],
+    columns_with_iterables: list,
+    require_all_on: str = None,
 ) -> pd.DataFrame:
     """
     Search for entries in the catalog.
@@ -59,9 +62,11 @@ def search(
         A dataframe to search
     query: dict
         A dictionary of query parameters to execute against the dataframe
-    columns_with_iterables:
+    columns_with_iterables: list
         Columns in the dataframe that have iterables
-
+    require_all_on: str or None
+        If not None, groupby this column and return only entries that match
+        for all elements in each group
     Returns
     -------
     dataframe: :py:class:`~pandas.DataFrame`
@@ -71,6 +76,7 @@ def search(
     if not query:
         return pd.DataFrame(columns=df.columns)
     global_mask = np.ones(len(df), dtype=bool)
+    has_all_mask = np.ones(len(df), dtype=bool)
     for column, values in query.items():
         local_mask = np.zeros(len(df), dtype=bool)
         column_is_stringtype = isinstance(
@@ -92,7 +98,15 @@ def search(
                 mask = df[column].str.contains(value, regex=True, case=True, flags=0)
             else:
                 mask = df[column] == value
-            local_mask = local_mask | mask
+            local_mask = local_mask + mask.astype(int)
+
+        if require_all_on:
+            mask = local_mask.groupby(df[require_all_on]).transform("sum") >= len(
+                values
+            )
+            has_all_mask = has_all_mask & mask
+
+        local_mask = local_mask.astype(bool)
 
         if column_has_iterables:
             # Overwrite iterable entries with subset found
@@ -102,6 +116,9 @@ def search(
             ] = matched_iterables.loc[local_mask].apply(cast_type)
 
         global_mask = global_mask & local_mask
+
+    if require_all_on:
+        global_mask = global_mask & has_all_mask
 
     results = df.loc[global_mask]
     return results.reset_index(drop=True)

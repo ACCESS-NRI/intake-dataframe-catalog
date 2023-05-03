@@ -190,34 +190,71 @@ def test_search(query, expected):
 
 
 @pytest.mark.parametrize(
-    "query,expected",
+    "query, require_all_on, expected",
     [
         (
-            {"B": ["a", "c"], "D": [2]},
+            {"B": ["a", "b"], "D": [0]},
+            None,
             [
-                {"A": "aba", "B": ["a", "c"], "C": ("cx", "cz"), "D": {2}},
+                {"A": "aaa", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0}},
+                {"A": "aba", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}},
+                {"A": "abA", "B": ["a"], "C": ("cx", "cy"), "D": {0}},
+            ],
+        ),
+        (
+            {"B": ["a", "b"], "D": [0, 1]},
+            None,
+            [
+                {"A": "aaa", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0, 1}},
+                {"A": "aba", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}},
+                {"A": "abA", "B": ["a"], "C": ("cx", "cy"), "D": {0, 1}},
+            ],
+        ),
+        (
+            {"B": ["a", "b"], "D": [0]},
+            "A",
+            [
+                {"A": "aaa", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0}},
+                {"A": "aba", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}},
+            ],
+        ),
+        (
+            {"B": ["a", "b"], "D": [0, 1]},
+            "A",
+            [
+                {"A": "aaa", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0, 1}},
             ],
         ),
         (
             {"A": ["aba"], "B": ["c"], "C": ["cz"], "D": [2]},
+            "A",
             [
                 {"A": "aba", "B": ["c"], "C": ("cz",), "D": {2}},
             ],
         ),
         (
             {"A": ["aba"], "B": ["c"], "C": ["cz"], "D": [1]},
+            "A",
             [],
         ),
         (
-            {"A": ["a.*a"], "B": ["b"], "C": ["c.*"]},
+            {"A": ["a.*a"], "B": ["a", "c"], "C": ["c.*"]},
+            None,
             [
-                {"A": "aaa", "B": ["b"], "C": ("cx", "cy"), "D": {0, 1}},
-                {"A": "aba", "B": ["b"], "C": ("cx", "cz"), "D": {0, 2}},
+                {"A": "aaa", "B": ["a"], "C": ("cx", "cy"), "D": {0, 1}},
+                {"A": "aba", "B": ["a", "c"], "C": ("cx", "cz"), "D": {0, 2}},
+            ],
+        ),
+        (
+            {"A": ["a.*a"], "B": ["a", "c"], "C": ["c.*"]},
+            "A",
+            [
+                {"A": "aba", "B": ["a", "c"], "C": ("cx", "cz"), "D": {0, 2}},
             ],
         ),
     ],
 )
-def test_search_columns_with_iterables(query, expected):
+def test_search_columns_with_iterables(query, require_all_on, expected):
     df = pd.DataFrame(
         {
             "A": ["aaa", "aba", "abA"],
@@ -227,6 +264,9 @@ def test_search_columns_with_iterables(query, expected):
         }
     )
     results = search(
-        df=df, query=query, columns_with_iterables=["B", "C", "D"]
+        df=df,
+        query=query,
+        columns_with_iterables=["B", "C", "D"],
+        require_all_on=require_all_on,
     ).to_dict(orient="records")
     assert results == expected
