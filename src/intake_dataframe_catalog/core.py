@@ -5,6 +5,7 @@ import ast
 import tlz
 import typing
 import warnings
+from io import UnsupportedOperation
 
 import yaml
 import fsspec
@@ -15,7 +16,7 @@ from intake.catalog import Catalog
 from intake.catalog.local import LocalCatalogEntry
 
 from . import __version__
-from ._search import search, search_apply_require_all_on
+from ._search import search
 
 pd.set_option("display.max_colwidth", 200)
 pd.set_option("display.max_rows", 8)
@@ -83,7 +84,7 @@ class DfFileCatalog(Catalog):
         self.storage_options = storage_options or {}
         self._intake_kwargs = intake_kwargs or {}
 
-        read_kwargs = read_kwargs or {}
+        read_kwargs = read_kwargs.copy() if read_kwargs else {}
         if self._columns_with_iterables:
             converter = ast.literal_eval
             read_kwargs.setdefault("converters", {})
@@ -96,7 +97,7 @@ class DfFileCatalog(Catalog):
         self._read_kwargs = read_kwargs
 
         self._entries = {}
-        self._df = pd.DataFrame(list())
+        self._df = pd.DataFrame(columns=[self.name_column, self.yaml_column])
         self._df_summary = None
 
         self._allow_write = False
@@ -122,6 +123,18 @@ class DfFileCatalog(Catalog):
             else:
                 with fsspec.open(self.path, **self.storage_options) as fobj:
                     self._df = pd.read_csv(fobj, **self._read_kwargs)
+                if self.yaml_column not in self.df.columns:
+                    raise DfFileCatalogError(
+                        f"'{self.yaml_column}' is not a column in the DF catalog. Please provide "
+                        "the name of the column containing intake YAML descriptions via argument "
+                        "`yaml_column`."
+                    )
+                if self.name_column not in self.df.columns:
+                    raise DfFileCatalogError(
+                        f"'{self.name_column}' is not a column in the DF catalog. Please provide "
+                        "the name of the column containing subcatalog names via argument "
+                        "`name_column`."
+                    )
 
     def __len__(self) -> int:
         return len(self.keys())
@@ -154,7 +167,7 @@ class DfFileCatalog(Catalog):
                 ).get()
                 return self._entries[key]
             raise KeyError(
-                f"key={key} not found in catalog. You can access the list of valid keys via the .keys() method."
+                f"key='{key}' not found in catalog. You can access the list of valid keys via the .keys() method."
             ) from e
 
     def __repr__(self) -> str:
@@ -214,22 +227,24 @@ class DfFileCatalog(Catalog):
                 values = tlz.concat(values)
             return list(tlz.unique(values))
 
-        if self.df.empty:
+        if self._df.empty:
             return {col: [] for col in self.columns}
         else:
             return self.df.apply(_find_unique, result_type="reduce").to_dict()
 
     def unique(self) -> pd.Series:
         """
-        Return a series of unique values for each column in the DF catalog.
+        Return a series of unique values for each column in the DF catalog, excluding the
+        yaml description column.
         """
-        return pd.Series(self._unique())
+        return pd.Series(self._unique()).drop(self.yaml_column)
 
     def nunique(self) -> pd.Series:
         """
-        Return a series of the number of unique values for each column in the DF catalog.
+        Return a series of the number of unique values for each column in the DF catalog,
+        excluding the yaml description column.
         """
-        return pd.Series(tlz.valmap(len, self._unique()))
+        return pd.Series(tlz.valmap(len, self._unique())).drop(self.yaml_column)
 
     def add(
         self,
@@ -272,9 +287,18 @@ class DfFileCatalog(Catalog):
         row = pd.DataFrame({k: 0 for k in metadata.keys()}, index=[0])
         row.iloc[0] = pd.Series(metadata)
 
-        if self.df.empty:
+        if self._df.empty:
             self._df = row
         else:
+            # Check that new entries contain iterables when they should
+            entry_iterable_columns = _columns_with_iterables(row)
+            if entry_iterable_columns != self.columns_with_iterables:
+                raise DfFileCatalogError(
+                    f"Cannot add entry with iterable metadata columns: {entry_iterable_columns} "
+                    f"to DF catalog with iterable metadata columns: {self.columns_with_iterables}. "
+                    " Please ensure that metadata entries are consistent."
+                )
+
             if set(self.columns) == set(row.columns):
                 if (
                     metadata[self.name_column] in self.df[self.name_column].unique()
@@ -290,6 +314,9 @@ class DfFileCatalog(Catalog):
                     f"metadata must include the following keys to be added to this DF catalog: {metadata_columns}. "
                     f"You passed a dictionary with the following keys: {metadata_keys}"
                 )
+
+        # Force recompute df_summary
+        self._df_summary = None
 
     def remove(self, entry: str) -> None:
         """
@@ -311,54 +338,68 @@ class DfFileCatalog(Catalog):
                 f"'{entry}' is not an entry in the '{self.name_column}' column of the DF catalog"
             )
 
+        # Drop metadata columns if there are no entries
+        if self._df.empty:
+            self._df = self._df[[self.name_column, self.yaml_column]]
+
+        # Force recompute df_summary
+        self._df_summary = None
+
     def search(self, require_all: bool = False, **query: typing.Any) -> pd.DataFrame:
         """
-        Search for entries in the DF catalog.
+        Search for subcatalogs in the DF catalog. Multiple columns can be queried simutaneously by
+        passing multiple queries. Only subcatalogs that satisfy all column queries are returned.
+        Additionally, multiple values within a column can be queried by passing a list of values to
+        query on. By default, a column query is considered to match if any of the values are found
+        in the corresponding subcatalog metadata (see the `require_all` argument).
 
         Parameters
         ----------
         query: dict, optional
-            A dictionary of query parameters to execute against the DF catalog.
+            A dictionary of query parameters to execute against the DF catalog: {column_name: value[s]}.
         require_all : bool, optional
-            If True, entries must satisfy all the query criteria, otherwise results that satisfy any of criteria
-            are returned.
+            If True, returned subcatalogs satisfy all the query criteria. For example, a query of
+            `variable = ["a", "b"]` with `require_all = True` will return only subcatalogs that
+            contain _both_ variables "a" and "b".
 
         Returns
         -------
         dataframe: :py:class:`~pandas.DataFrame`
             A new dataframe with the entries satisfying the query criteria.
         """
-
         columns = self.columns
 
         for key, value in query.items():
             if key not in columns:
-                raise ValueError(f"Column {key} not in columns {columns}")
+                raise ValueError(f"Column '{key}' not in columns {columns}")
             if not isinstance(query[key], list):
                 query[key] = [query[key]]
 
+        require_all_on = self.name_column if require_all else None
         results = search(
-            df=self.df, query=query, columns_with_iterables=self.columns_with_iterables
+            df=self.df,
+            query=query,
+            columns_with_iterables=self.columns_with_iterables,
+            require_all_on=require_all_on,
         )
-        if require_all and not results.empty:
-            results = search_apply_require_all_on(
-                df=results,
-                query=query,
-                require_all_on=self.name_column,
-                columns_with_iterables=self.columns_with_iterables,
-            )
 
         cat = self.__class__(
             yaml_column=self.yaml_column,
             name_column=self.name_column,
+            mode=self.mode,
+            columns_with_iterables=self.columns_with_iterables,
+            storage_options=self.storage_options,
+            read_kwargs=self._read_kwargs,
             **self._intake_kwargs,
         )
+        cat.path = self.path
         cat._df = results
 
         return cat
 
     def save(
         self,
+        path: str = None,
         **kwargs: dict[str, typing.Any],
     ) -> None:
         """
@@ -366,24 +407,31 @@ class DfFileCatalog(Catalog):
 
         Parameters
         ----------
+        path : str or None, optional
+            Location to save the catalog. If None, the path specified at initialisation
+            of the catalog is used.
         kwargs: dict, optional
             Additional keyword arguments passed to :py:func:`~pandas.DataFrame.to_csv`.
         """
 
+        save_path = path if path else self.path
+
         if self._allow_write:
             mapper = fsspec.get_mapper(
-                f"{self.path}", storage_options=self.storage_options
+                f"{save_path}", storage_options=self.storage_options
             )
             fs = mapper.fs
-            fname = f"{mapper.fs.protocol}://{self.path}"
+            fname = f"{mapper.fs.protocol}://{save_path}"
 
             csv_kwargs = {"index": False}
-            csv_kwargs.update(kwargs or {})
+            csv_kwargs.update(kwargs.copy() or {})
 
             with fs.open(fname, "wb") as fobj:
                 self.df.to_csv(fobj, **csv_kwargs)
         else:
-            raise ValueError(f"Cannot save catalog initialised with mode='{self.mode}'")
+            raise UnsupportedOperation(
+                f"Cannot save catalog initialised with mode='{self.mode}'"
+            )
 
     serialize = save
 
@@ -409,7 +457,7 @@ class DfFileCatalog(Catalog):
 
         if not self.keys():
             warnings.warn(
-                "There are no subcatalogs to open! Returning an empty dictionary.",
+                "There are no subcatalogs to open. Returning an empty dictionary.",
                 UserWarning,
                 stacklevel=2,
             )
@@ -465,18 +513,11 @@ class DfFileCatalog(Catalog):
 
         if self._columns_with_iterables is None:
             if self._df.empty:
-                return set()
-            has_iterables = (
-                self._df.sample(20, replace=True)
-                .applymap(type)
-                .isin([list, tuple, set])
-                .any()
-                .to_dict()
-            )
+                return list()
 
-            self._columns_with_iterables = [
-                column for column, check in has_iterables.items() if check
-            ]
+            self._columns_with_iterables = _columns_with_iterables(
+                self._df, sample=True
+            )
 
         return self._columns_with_iterables
 
@@ -487,20 +528,22 @@ class DfFileCatalog(Catalog):
         """
 
         def _list_unique(series):
-            uniques = sorted(
-                set(
-                    series.drop_duplicates()
-                    .apply(
-                        lambda x: x
-                        if series.name in self.columns_with_iterables
-                        else [x]
-                    )
-                    .sum()
-                )
+            uniques = set(
+                series.apply(
+                    lambda x: list(x)
+                    if series.name in self.columns_with_iterables
+                    else [
+                        x,
+                    ]
+                ).sum()
             )
-            return uniques[0] if len(uniques) == 1 else uniques
+            return uniques  # uniques[0] if len(uniques) == 1 else uniques
 
-        if self._df_summary is None:
+        if self._df.empty:
+            self._df_summary = self.df.set_index(self.name_column).drop(
+                columns=self.yaml_column
+            )
+        elif self._df_summary is None:
             self._df_summary = self.df.groupby(self.name_column).agg(
                 {
                     col: _list_unique
@@ -511,3 +554,16 @@ class DfFileCatalog(Catalog):
             )
 
         return self._df_summary
+
+
+def _columns_with_iterables(df, sample=False):
+    """
+    Return a list of the columns in the provided pandas dataframe/series that have iterables.
+    Stolen from https://github.com/intake/intake-esm/blob/main/intake_esm/cat.py#L277
+    """
+
+    _df = df.sample(20, replace=True) if sample else df
+
+    has_iterables = _df.applymap(type).isin([list, tuple, set]).any().to_dict()
+
+    return [col for col, check in has_iterables.items() if check]

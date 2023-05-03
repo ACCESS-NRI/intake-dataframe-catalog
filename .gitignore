@@ -129,6 +129,5 @@ dmypy.json
 .pyre/
 
 # Files
-*.csv
 *.yaml
 sandpit.ipynb

@@ -1,0 +1,3 @@
+[run]
+omit =
+    src/intake_dataframe_catalog/_version.py

@@ -1,0 +1,6 @@
+activity,ensemble_member,experiment,frequency,institute,model,modeling_realm,variable,path,time_range
+CMIP5,r1i1p1,esmControl,mon,ncar,BNU-ESM,ocnBgchem,fgco2,./tests/data/source/cmip5/BNU/BNU-ESM/esmControl/mon/ocnBgchem/cfMon/r1i1p1/v20120503/fgco2/fgco2_Omon_BNU-ESM_esmControl_r1i1p1_145001-170712.nc,145001-170712
+CMIP5,r1i1p1,esmHistorical,mon,ncar,BNU-ESM,ocnBgchem,fgco2,./tests/data/source/cmip5/BNU/BNU-ESM/esmHistorical/mon/ocnBgchem/cfMon/r1i1p1/v20120504/fgco2/fgco2_Omon_BNU-ESM_esmHistorical_r1i1p1_185001-200512.nc,185001-200512
+CMIP5,r4i1p1,historical,mon,CCCma,CanCM4,atmos,hfls,./tests/data/source/cmip5/CCCma/CanCM4/historical/mon/atmos/Amon/r4i1p1/v20120612/hfls/hfls_Amon_CanCM4_historical_r4i1p1_196101-200512.nc,196101-200512
+CMIP5,r1i1p1,esmHistorical,mon,CCCma,CanESM2,ocnBgchem,fgco2,./tests/data/source/cmip5/CCCma/CanESM2/esmHistorical/mon/ocnBgchem/Omon/r1i1p1/v20111027/fgco2/fgco2_Omon_CanESM2_esmHistorical_r1i1p1_185001-200512.nc,185001-200512
+CMIP5,r1i1p1,rcp85,mon,ncar,CMCC-CESM,atmos,tasmax,./tests/data/source/cmip5/CMCC/CMCC-CESM/rcp85/mon/atmos/Amon/r1i1p1/v20120730/tasmax/tasmax_Amon_CMCC-CESM_rcp85_r1i1p1_208601-209512.nc,208601-209512

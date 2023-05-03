@@ -1,0 +1,35 @@
+realm,variable,name,yaml
+atmos,['tas'],gistemp,"sources:
+  gistemp:
+    args:
+      urlpath: ./tests/data/source/gistemp.csv
+    description: ''
+    driver: intake.source.csv.CSVSource
+    metadata: {}
+"
+ocean,"['TEMP', 'REGION_MASK', 'PO4', 'SHF', 'O2', 'ANGLE', 'KMT', 'NO2', 'DXU', 'SiO3']",cesm,"sources:
+  cesm:
+    args:
+      columns_with_iterables:
+      - variable
+      obj: ./tests/data/source/cesm.json
+    description: ''
+    driver: intake_esm.core.esm_datastore
+    metadata: {}
+"
+ocnBgchem,['fgco2'],cmip5,"sources:
+  cmip5:
+    args:
+      obj: ./tests/data/source/cmip5.json
+    description: ''
+    driver: intake_esm.core.esm_datastore
+    metadata: {}
+"
+atmos,"['hfls', 'tasmax']",cmip5,"sources:
+  cmip5:
+    args:
+      obj: ./tests/data/source/cmip5.json
+    description: ''
+    driver: intake_esm.core.esm_datastore
+    metadata: {}
+"
