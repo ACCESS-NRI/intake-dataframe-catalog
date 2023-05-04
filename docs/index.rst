@@ -5,8 +5,8 @@
 
 intake-dataframe-catalog 
 ========================
-An intake plugin for a searchable table of intake catalogs and associated metadata
-----------------------------------------------------------------------------------
+
+**An intake plugin for a searchable table of intake catalogs and associated metadata**
 
 .. toctree::
    :maxdepth: 1
