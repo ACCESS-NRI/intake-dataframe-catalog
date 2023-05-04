@@ -7,4 +7,5 @@ These pages include reference information for users and contributors.
    :maxdepth: 1
 
    api
+   contributing
    changelog
