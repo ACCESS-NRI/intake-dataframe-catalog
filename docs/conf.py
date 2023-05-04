@@ -15,6 +15,7 @@ author = "ACCESS-NRI"
 
 extensions = [
     "numpydoc",
+    "sphinx_rtd_theme",
     "sphinx.ext.napoleon",
     "autoapi.extension",
     "nbsphinx",
@@ -28,7 +29,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx-rtd-theme"
+html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_theme_options = {
     "use_edit_page_button": True,
