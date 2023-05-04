@@ -26,7 +26,7 @@ To do
 [ci-tests-link]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/tests.yml
 [ci-precommit-badge]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/pre-commit.yml/badge.svg
 [ci-precommit-link]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/pre-commit.yml
-[docs-badge]: https://readthedocs.org/projects/intake-dataframe-catalog/badge/?version=l    atest
+[docs-badge]: https://readthedocs.org/projects/intake-dataframe-catalog/badge/?version=latest
 [docs-link]: https://intake-dataframe-catalog.readthedocs.io/en/latest/?badge=latest
 [codecov-badge]: https://codecov.io/gh/ACCESS-NRI/intake-dataframe-catalog/branch/main/graph/badge.svg?token=4EZNH1HYAN
 [codecov-link]: https://codecov.io/gh/ACCESS-NRI/intake-dataframe-catalog
