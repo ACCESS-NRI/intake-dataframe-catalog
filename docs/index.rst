@@ -3,18 +3,21 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to intake-dataframe-catalog's documentation!
-====================================================
+intake-dataframe-catalog 
+========================
+An intake plugin for a searchable table of intake catalogs and associated metadata
+----------------------------------------------------------------------------------
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+   :hidden:
+
+   reference/index
 
 
+.. Indices and tables
+  ==================
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+  * :ref:`genindex`
+  * :ref:`modindex`
+  * :ref:`search`

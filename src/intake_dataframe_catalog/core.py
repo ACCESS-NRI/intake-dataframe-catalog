@@ -48,10 +48,12 @@ class DfFileCatalog(Catalog):
         **intake_kwargs: dict[str, typing.Any],
     ):
         """
+        Initialise a DfFileCatalog
+
         Parameters
         ----------
         path : str
-            Path to the DF catalog file.
+            Path to the dataframe catalog file.
         yaml_column: str, optional
             Name of the column in the tabular file containing intake yaml descriptions of the intake
             (sub)catalogs.
@@ -111,7 +113,7 @@ class DfFileCatalog(Catalog):
 
     def _load(self) -> None:
         """
-        Load the DF catalog from file.
+        Load the dataframe catalog from file.
         """
         if self.path:
             if self._try_overwrite:
@@ -125,13 +127,13 @@ class DfFileCatalog(Catalog):
                     self._df = pd.read_csv(fobj, **self._read_kwargs)
                 if self.yaml_column not in self.df.columns:
                     raise DfFileCatalogError(
-                        f"'{self.yaml_column}' is not a column in the DF catalog. Please provide "
+                        f"'{self.yaml_column}' is not a column in the dataframe catalog. Please provide "
                         "the name of the column containing intake YAML descriptions via argument "
                         "`yaml_column`."
                     )
                 if self.name_column not in self.df.columns:
                     raise DfFileCatalogError(
-                        f"'{self.name_column}' is not a column in the DF catalog. Please provide "
+                        f"'{self.name_column}' is not a column in the dataframe catalog. Please provide "
                         "the name of the column containing subcatalog names via argument "
                         "`name_column`."
                     )
@@ -178,7 +180,7 @@ class DfFileCatalog(Catalog):
 
     def _repr_html_(self) -> str:
         """
-        Return an html summary for the DF catalog object. Mainly for IPython notebook
+        Return an html summary for the dataframe catalog object. Mainly for IPython notebook
         """
 
         text = self.df_summary._repr_html_()
@@ -199,7 +201,7 @@ class DfFileCatalog(Catalog):
 
     def keys(self) -> list[str]:
         """
-        Return a list of keys for the DF catalog entries.
+        Return a list of keys for the dataframe catalog entries.
         """
         return self.unique()[self.name_column]
 
@@ -211,7 +213,7 @@ class DfFileCatalog(Catalog):
         Returns
         -------
         entries: dict
-            Dictionary of all available entries in the DF catalog.
+            Dictionary of all available entries in the dataframe catalog.
         """
 
         missing = set(self.keys()) - set(self._entries.keys())
@@ -234,14 +236,14 @@ class DfFileCatalog(Catalog):
 
     def unique(self) -> pd.Series:
         """
-        Return a series of unique values for each column in the DF catalog, excluding the
+        Return a series of unique values for each column in the dataframe catalog, excluding the
         yaml description column.
         """
         return pd.Series(self._unique()).drop(self.yaml_column)
 
     def nunique(self) -> pd.Series:
         """
-        Return a series of the number of unique values for each column in the DF catalog,
+        Return a series of the number of unique values for each column in the dataframe catalog,
         excluding the yaml description column.
         """
         return pd.Series(tlz.valmap(len, self._unique())).drop(self.yaml_column)
@@ -253,7 +255,7 @@ class DfFileCatalog(Catalog):
         overwrite: bool = False,
     ) -> None:
         """
-        Add an intake (sub)catalog to the DF catalog.
+        Add an intake (sub)catalog to the dataframe catalog.
 
         Parameters
         ----------
@@ -264,8 +266,8 @@ class DfFileCatalog(Catalog):
             the 'name_column', the catalog name will be overwritten with this value. Otherwise the
             'name_column' entry is taken from the intake catalog name if it exists, failing otherwise.
         overwrite : bool, optional
-            If True, overwrite all existing entries in the DF catalog with name_column entries that
-            match the name of this cat.
+            If True, overwrite all existing entries in the dataframe catalog with name_column entries
+            that match the name of this cat.
         """
 
         metadata = metadata or {}
@@ -278,9 +280,9 @@ class DfFileCatalog(Catalog):
                 metadata[self.name_column] = cat.name
             else:
                 raise DfFileCatalogError(
-                    "Cannot add an unnamed catalog to the DF catalog. Either set the name attribute on "
-                    "the catalog being add or provide an entry in the input argument 'metadata' "
-                    "corresponding to the 'name_column' of the DF catalog"
+                    "Cannot add an unnamed catalog to the dataframe catalog. Either set the name attribute "
+                    "on the catalog being add or provide an entry in the input argument 'metadata' "
+                    "corresponding to the 'name_column' of the dataframe catalog"
                 )
         metadata[self.yaml_column] = cat.yaml()
 
@@ -295,7 +297,7 @@ class DfFileCatalog(Catalog):
             if entry_iterable_columns != self.columns_with_iterables:
                 raise DfFileCatalogError(
                     f"Cannot add entry with iterable metadata columns: {entry_iterable_columns} "
-                    f"to DF catalog with iterable metadata columns: {self.columns_with_iterables}. "
+                    f"to dataframe catalog with iterable metadata columns: {self.columns_with_iterables}. "
                     " Please ensure that metadata entries are consistent."
                 )
 
@@ -311,8 +313,8 @@ class DfFileCatalog(Catalog):
                 metadata_columns.remove(self.name_column)
                 metadata_columns.remove(self.yaml_column)
                 raise DfFileCatalogError(
-                    f"metadata must include the following keys to be added to this DF catalog: {metadata_columns}. "
-                    f"You passed a dictionary with the following keys: {metadata_keys}"
+                    "metadata must include the following keys to be added to this dataframe catalog: "
+                    f"{metadata_columns}. You passed a dictionary with the following keys: {metadata_keys}"
                 )
 
         # Force recompute df_summary
@@ -320,7 +322,7 @@ class DfFileCatalog(Catalog):
 
     def remove(self, entry: str) -> None:
         """
-        Remove an intake (sub)catalog from the DF catalog.
+        Remove an intake (sub)catalog from the dataframe catalog.
 
         Parameters
         ----------
@@ -335,7 +337,7 @@ class DfFileCatalog(Catalog):
             )
         else:
             raise ValueError(
-                f"'{entry}' is not an entry in the '{self.name_column}' column of the DF catalog"
+                f"'{entry}' is not an entry in the '{self.name_column}' column of the dataframe catalog"
             )
 
         # Drop metadata columns if there are no entries
@@ -347,8 +349,8 @@ class DfFileCatalog(Catalog):
 
     def search(self, require_all: bool = False, **query: typing.Any) -> pd.DataFrame:
         """
-        Search for subcatalogs in the DF catalog. Multiple columns can be queried simutaneously by
-        passing multiple queries. Only subcatalogs that satisfy all column queries are returned.
+        Search for subcatalogs in the dataframe catalog. Multiple columns can be queried simutaneously
+        by passing multiple queries. Only subcatalogs that satisfy all column queries are returned.
         Additionally, multiple values within a column can be queried by passing a list of values to
         query on. By default, a column query is considered to match if any of the values are found
         in the corresponding subcatalog metadata (see the `require_all` argument).
@@ -356,7 +358,8 @@ class DfFileCatalog(Catalog):
         Parameters
         ----------
         query: dict, optional
-            A dictionary of query parameters to execute against the DF catalog: {column_name: value[s]}.
+            A dictionary of query parameters to execute against the dataframe catalog:
+            {column_name: value[s]}.
         require_all : bool, optional
             If True, returned subcatalogs satisfy all the query criteria. For example, a query of
             `variable = ["a", "b"]` with `require_all = True` will return only subcatalogs that
@@ -403,7 +406,7 @@ class DfFileCatalog(Catalog):
         **kwargs: dict[str, typing.Any],
     ) -> None:
         """
-        Save a DF catalog to a file.
+        Save the dataframe catalog to a file.
 
         Parameters
         ----------
@@ -439,7 +442,7 @@ class DfFileCatalog(Catalog):
         self, **kwargs: dict[str, typing.Any]
     ) -> dict[str, typing.Any]:
         """
-        Load DF catalog entries into a dictionary of intake subcatalogs.
+        Load dataframe catalog entries into a dictionary of intake subcatalogs.
 
         Parameters
         ----------
@@ -466,7 +469,8 @@ class DfFileCatalog(Catalog):
 
     def to_subcatalog(self, **kwargs: dict[str, typing.Any]) -> intake.DataSource:
         """
-        Load intake subcatalog. This is only possible if there is only one remaining subcatalog in the DF catalog.
+        Load intake subcatalog. This is only possible if there is only one remaining subcatalog in the dataframe
+        catalog.
 
         Parameters
         ----------
@@ -493,22 +497,22 @@ class DfFileCatalog(Catalog):
     @property
     def df(self) -> pd.DataFrame:
         """
-        Return a :py:class:`~pandas.DataFrame` representation of the DF catalog. This property is mostly for
-        internal use. Users may find the `df_summary` property more useful.
+        Return a pandas :py:class:`~pandas.DataFrame` representation of the dataframe catalog. This property is
+        mostly for internal use. Users may find the `df_summary` property more useful.
         """
         return self._df
 
     @property
     def columns(self) -> list[str]:
         """
-        Return a list of the columns in the DF catalog.
+        Return a list of the columns in the dataframe catalog.
         """
         return self.df.columns.tolist()
 
     @property
     def columns_with_iterables(self) -> set[str]:
         """
-        Return a list of the columns in the DF catalog that have iterables.
+        Return a list of the columns in the dataframe catalog that have iterables.
         """
 
         if self._columns_with_iterables is None:
@@ -524,7 +528,7 @@ class DfFileCatalog(Catalog):
     @property
     def df_summary(self) -> pd.DataFrame:
         """
-        Return a :py:class:`~pandas.DataFrame` summary of unique entries in DF catalog.
+        Return a pandas :py:class:`~pandas.DataFrame` summary of unique entries in dataframe catalog.
         """
 
         def _list_unique(series):

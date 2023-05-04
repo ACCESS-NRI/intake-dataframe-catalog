@@ -19,6 +19,7 @@ setup(
     python_requires=">=3.9",
     install_requires=[
         "intake",
+        "pandas",
     ],
     entry_points={
         "intake.drivers": [

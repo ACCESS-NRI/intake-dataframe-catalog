@@ -9,12 +9,12 @@ dependencies:
   - numpydoc
   - sphinx
   - sphinx-autobuild
+  - pandas
   - black
   - flake8
   - pip
   - pip:
-    - sphinx_rtd_theme
+    - sphinx-book-theme
     - sphinxcontrib-napoleon
-    - sphinx-autoapi
     - sphinx-copybutton
     - pre-commit
