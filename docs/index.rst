@@ -12,12 +12,6 @@ An intake plugin for a searchable table of intake catalogs and associated metada
    :maxdepth: 1
    :hidden:
 
+   getting_started/index
    reference/index
 
-
-.. Indices and tables
-  ==================
-
-  * :ref:`genindex`
-  * :ref:`modindex`
-  * :ref:`search`

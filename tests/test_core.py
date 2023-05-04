@@ -305,7 +305,9 @@ def test_catalog_add(catalog_path, source_path):
 
     with pytest.raises(DfFileCatalogError) as excinfo:
         cat.add(gistemp, metadata={"realm": "atmos", "variable": ["tas"]})
-    assert "Cannot add an unnamed catalog to the DF catalog" in str(excinfo.value)
+    assert "Cannot add an unnamed catalog to the dataframe catalog" in str(
+        excinfo.value
+    )
 
     gistemp.name = "gistemp"
     cat.add(gistemp, metadata={"realm": "atmos", "variable": ["tas"]})

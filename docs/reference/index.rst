@@ -6,3 +6,4 @@ Reference
    :hidden:
 
    api
+   changelog
