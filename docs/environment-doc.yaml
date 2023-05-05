@@ -1,0 +1,21 @@
+name: intake-df-cat-doc
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python==3.11
+  - ipython
+  - nbsphinx
+  - numpydoc
+  - sphinx
+  - sphinx-autobuild
+  - pandas
+  - black
+  - flake8
+  - pip
+  - pip:
+    - sphinx-book-theme
+    - sphinxcontrib-napoleon
+    - sphinx-copybutton
+    - pre-commit
+    - -e ..

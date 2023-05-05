@@ -129,5 +129,5 @@ dmypy.json
 .pyre/
 
 # Files
-*.yaml
 sandpit.ipynb
+.DS_Store

@@ -51,7 +51,8 @@ def search(
     df: pd.DataFrame,
     query: dict[str, typing.Any],
     columns_with_iterables: list,
-    require_all_on: str = None,
+    name_column: str,
+    require_all: str = False,
 ) -> pd.DataFrame:
     """
     Search for entries in the catalog.
@@ -64,8 +65,10 @@ def search(
         A dictionary of query parameters to execute against the dataframe
     columns_with_iterables: list
         Columns in the dataframe that have iterables
-    require_all_on: str or None
-        If not None, groupby this column and return only entries that match
+    name_column: str
+        The name column in the dataframe catalog
+    require_all: str or None
+        If True, groupby name_column and return only entries that match
         for all elements in each group
     Returns
     -------
@@ -73,12 +76,15 @@ def search(
             A new dataframe with the entries satisfying the query criteria.
     """
     df = df.copy()
+    groups = df[name_column]
+    n_groups = groups.nunique()
     if not query:
         return pd.DataFrame(columns=df.columns)
     global_mask = np.ones(len(df), dtype=bool)
-    has_all_mask = np.ones(len(df), dtype=bool)
+    has_all_mask = np.ones(n_groups, dtype=bool)
     for column, values in query.items():
         local_mask = np.zeros(len(df), dtype=bool)
+        has_mask = np.zeros(n_groups, dtype=bool)
         column_is_stringtype = isinstance(
             df[column].dtype, (object, pd.core.arrays.string_.StringDtype)
         )
@@ -98,15 +104,11 @@ def search(
                 mask = df[column].str.contains(value, regex=True, case=True, flags=0)
             else:
                 mask = df[column] == value
-            local_mask = local_mask + mask.astype(int)
+            local_mask = local_mask + mask
+            has_mask = has_mask + mask.groupby(groups).any().astype(int)
 
-        if require_all_on:
-            mask = local_mask.groupby(df[require_all_on]).transform("sum") >= len(
-                values
-            )
-            has_all_mask = has_all_mask & mask
-
-        local_mask = local_mask.astype(bool)
+        mask = has_mask == len(values)
+        has_all_mask = has_all_mask & mask
 
         if column_has_iterables:
             # Overwrite iterable entries with subset found
@@ -117,7 +119,9 @@ def search(
 
         global_mask = global_mask & local_mask
 
-    if require_all_on:
+    if require_all:
+        # Expand has_all_mask across all groups
+        has_all_mask = has_all_mask.loc[groups].reset_index(drop=True)
         global_mask = global_mask & has_all_mask
 
     results = df.loc[global_mask]
