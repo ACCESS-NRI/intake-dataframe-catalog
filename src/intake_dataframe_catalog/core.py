@@ -223,16 +223,13 @@ class DfFileCatalog(Catalog):
         return self._entries
 
     def _unique(self) -> dict:
-        def _find_unique(series):
-            values = series.dropna()
-            if series.name in self.columns_with_iterables:
-                values = tlz.concat(values)
-            return list(tlz.unique(values))
-
         if self._df.empty:
             return {col: [] for col in self.columns}
         else:
-            return self.df.apply(_find_unique, result_type="reduce").to_dict()
+            return self.df.apply(
+                lambda x: list(_find_unique(x, self.columns_with_iterables)),
+                result_type="reduce",
+            ).to_dict()
 
     def unique(self) -> pd.Series:
         """
@@ -532,18 +529,6 @@ class DfFileCatalog(Catalog):
         Return a pandas :py:class:`~pandas.DataFrame` summary of unique entries in dataframe catalog.
         """
 
-        def _list_unique(series):
-            uniques = set(
-                series.apply(
-                    lambda x: list(x)
-                    if series.name in self.columns_with_iterables
-                    else [
-                        x,
-                    ]
-                ).sum()
-            )
-            return uniques  # uniques[0] if len(uniques) == 1 else uniques
-
         if self._df.empty:
             self._df_summary = self.df.set_index(self.name_column).drop(
                 columns=self.yaml_column
@@ -551,14 +536,24 @@ class DfFileCatalog(Catalog):
         elif self._df_summary is None:
             self._df_summary = self.df.groupby(self.name_column).agg(
                 {
-                    col: _list_unique
+                    col: lambda x: _find_unique(x, self.columns_with_iterables)
                     for col in self.df.columns.drop(
                         [self.name_column, self.yaml_column]
                     )
-                }
+                },
             )
 
         return self._df_summary
+
+
+def _find_unique(series, columns_with_iterables):
+    """
+    Return a set of unique values in a series
+    """
+    values = series.dropna()
+    if series.name in columns_with_iterables:
+        values = tlz.concat(values)
+    return set(values)
 
 
 def _columns_with_iterables(df, sample=False):

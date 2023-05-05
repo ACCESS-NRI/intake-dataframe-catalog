@@ -7,4 +7,4 @@ These pages will familiarise you with intake-dataframe-catalog, show you some ba
    :maxdepth: 1
 
    installation
-   quickstart
+   quickstart.ipynb
