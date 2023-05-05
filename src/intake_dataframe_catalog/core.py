@@ -379,12 +379,12 @@ class DfFileCatalog(Catalog):
             if not isinstance(query[key], list):
                 query[key] = [query[key]]
 
-        require_all_on = self.name_column if require_all else None
         results = search(
             df=self.df,
             query=query,
             columns_with_iterables=self.columns_with_iterables,
-            require_all_on=require_all_on,
+            name_column=self.name_column,
+            require_all=require_all,
         )
 
         cat = self.__class__(

@@ -56,6 +56,7 @@ def test_create_w(catalog_path, source_path):
     _add_gistemp(cat, source_path)
     _add_cesm(cat, source_path)
     _add_cmip5(cat, source_path)
+    _add_cmip6(cat, source_path)
     cat.save()
 
     cat = intake.open_df_catalog(path=str(path), mode="r")
@@ -157,35 +158,38 @@ def test_read_csv_conflict(catalog_path):
         (
             None,
             {
-                "realm": ["atmos", "ocean", "ocnBgchem"],
+                "realm": ["atmos", "ocean", "ocnBgchem", "land"],
                 "variable": [
                     "tas",
-                    "REGION_MASK",
-                    "SHF",
-                    "PO4",
-                    "NO2",
-                    "ANGLE",
-                    "DXU",
-                    "TEMP",
-                    "KMT",
                     "O2",
                     "SiO3",
+                    "DXU",
+                    "PO4",
+                    "SHF",
+                    "ANGLE",
+                    "NO2",
+                    "TEMP",
+                    "REGION_MASK",
+                    "KMT",
                     "fgco2",
                     "hfls",
                     "tasmax",
+                    "prsn",
+                    "gpp",
+                    "residualFrac",
                 ],
-                "name": ["gistemp", "cesm", "cmip5"],
+                "name": ["gistemp", "cesm", "cmip5", "cmip6"],
             },
-            {"realm": 3, "variable": 14, "name": 3},
+            {"realm": 4, "variable": 17, "name": 4},
         ),
         (
             {"realm": "atmos"},
             {
                 "realm": ["atmos"],
-                "variable": ["tas", "hfls", "tasmax"],
-                "name": ["gistemp", "cmip5"],
+                "variable": ["tas", "hfls", "tasmax", "prsn"],
+                "name": ["gistemp", "cmip5", "cmip6"],
             },
-            {"realm": 1, "variable": 3, "name": 2},
+            {"realm": 1, "variable": 4, "name": 3},
         ),
         (
             {"variable": "tas"},
@@ -241,7 +245,7 @@ def test_catalog_keys(catalog_path):
         str(catalog_path / "dfcat.csv"),
         columns_with_iterables=["variable"],
     )
-    assert set(cat.keys()) == set(["gistemp", "cesm", "cmip5"])
+    assert set(cat.keys()) == set(["gistemp", "cesm", "cmip5", "cmip6"])
 
     cat = intake.open_df_catalog(str(catalog_path / "tmp.csv"), mode="w")
     assert cat.keys() == []
@@ -251,15 +255,18 @@ def test_catalog_keys(catalog_path):
     "query, require_all, expected_len",
     [
         ({"realm": "ocean"}, False, 1),
-        ({"realm": ["atmos", "ocnBgchem"]}, False, 2),
+        ({"realm": ["atmos", "ocnBgchem"]}, False, 3),
         ({"realm": ["atmos", "ocnBgchem"]}, True, 1),
-        ({"realm": "atmos"}, False, 2),
+        ({"realm": "atmos"}, False, 3),
         ({"realm": "atmos", "variable": "tas"}, False, 1),
         ({"realm": "atmos", "variable": ["tas"]}, False, 1),
         ({"variable": ["NO2", "tas", "fgco2"]}, False, 3),
         ({"variable": ["NO2", "tas", "fgco2"]}, True, 0),
+        ({"name": ["cesm", "cmip5"]}, False, 2),
+        ({"name": ["cesm", "cmip5"]}, True, 0),
         ({"realm": "atmos", "name": "cesm"}, False, 0),
         ({}, False, 0),
+        ({}, True, 0),
     ],
 )
 def test_catalog_search(catalog_path, query, require_all, expected_len):
@@ -733,4 +740,24 @@ def _add_cmip5(cat, source_path):
             cmip5.df.loc[cmip5.df.modeling_realm == realm].variable.unique()
         )
         cat.add(cmip5, metadata={"realm": realm, "variable": variable})
+    return cat
+
+
+def _add_cmip6(cat, source_path):
+    """
+    Add CMIP6 intake-esm catalog to catalog
+    """
+    cmip6 = intake.open_esm_datastore(
+        str(source_path / "cmip6.json"),
+    )
+    cmip6.name = "cmip6"
+    for table_id in cmip6.df.table_id.unique():
+        if table_id == "Amon":
+            realm = "atmos"
+        elif table_id == "Lmon":
+            realm = "land"
+        variable = list(
+            cmip6.df.loc[cmip6.df.table_id == table_id].variable_id.unique()
+        )
+        cat.add(cmip6, metadata={"realm": realm, "variable": variable})
     return cat

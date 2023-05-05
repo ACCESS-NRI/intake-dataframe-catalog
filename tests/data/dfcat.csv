@@ -7,7 +7,7 @@ atmos,['tas'],gistemp,"sources:
     driver: intake.source.csv.CSVSource
     metadata: {}
 "
-ocean,"['TEMP', 'REGION_MASK', 'PO4', 'SHF', 'O2', 'ANGLE', 'KMT', 'NO2', 'DXU', 'SiO3']",cesm,"sources:
+ocean,"['O2', 'SiO3', 'DXU', 'PO4', 'SHF', 'ANGLE', 'NO2', 'TEMP', 'REGION_MASK', 'KMT']",cesm,"sources:
   cesm:
     args:
       columns_with_iterables:
@@ -29,6 +29,22 @@ atmos,"['hfls', 'tasmax']",cmip5,"sources:
   cmip5:
     args:
       obj: ./tests/data/source/cmip5.json
+    description: ''
+    driver: intake_esm.core.esm_datastore
+    metadata: {}
+"
+atmos,"['tasmax', 'prsn']",cmip6,"sources:
+  cmip6:
+    args:
+      obj: ./tests/data/source/cmip6.json
+    description: ''
+    driver: intake_esm.core.esm_datastore
+    metadata: {}
+"
+land,"['gpp', 'residualFrac']",cmip6,"sources:
+  cmip6:
+    args:
+      obj: ./tests/data/source/cmip6.json
     description: ''
     driver: intake_esm.core.esm_datastore
     metadata: {}
