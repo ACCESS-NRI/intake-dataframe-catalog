@@ -43,12 +43,14 @@ To install using the [pip](https://pypi.org/project/pip/) package manager:
 $ python -m pip install intake-dataframe-catalog
 ```
 
+[docs-badge]: https://readthedocs.org/projects/intake-dataframe-catalog/badge/?version=latest
+[docs-link]: https://intake-dataframe-catalog.readthedocs.io/en/latest/?badge=latest
+[PyPI-badge]: https://img.shields.io/pypi/v/intake-dataframe-catalog
+[PyPI-link]: https://pypi.org/project/intake-dataframe-catalog/
 [ci-tests-badge]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/tests.yml/badge.svg
 [ci-tests-link]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/tests.yml
 [ci-precommit-badge]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/pre-commit.yml/badge.svg
 [ci-precommit-link]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/pre-commit.yml
-[docs-badge]: https://readthedocs.org/projects/intake-dataframe-catalog/badge/?version=latest
-[docs-link]: https://intake-dataframe-catalog.readthedocs.io/en/latest/?badge=latest
 [codecov-badge]: https://codecov.io/gh/ACCESS-NRI/intake-dataframe-catalog/branch/main/graph/badge.svg?token=4EZNH1HYAN
 [codecov-link]: https://codecov.io/gh/ACCESS-NRI/intake-dataframe-catalog
 [black-badge]: https://img.shields.io/badge/code%20style-black-000000.svg
