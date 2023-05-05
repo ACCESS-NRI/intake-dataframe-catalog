@@ -7,7 +7,7 @@ __________
 | :---: |  :---: |
 | **Package** | [![PyPI][PyPI-badge]][PyPI-link] |
 | **CI** | [![tests][ci-tests-badge]][ci-tests-link] [![pre-commit][ci-precommit-badge]][ci-precommit-link] |
-| **CD** | [![tests][cd-badge]][cd-link] |
+| **CD** | [![build distribution][cd-badge]][cd-link] |
 | **Development** | [![codecov][codecov-badge]][codecov-link] [![black][black-badge]][black-link] |
 | **License** | [![License][license-badge]][license-link] |
 
