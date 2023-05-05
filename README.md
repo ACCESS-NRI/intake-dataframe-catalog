@@ -16,8 +16,8 @@ Overview
 
 intake-dataframe-catalog is a simple intake plugin for a searchable table of intake catalogs.
 The table is represented in memory as a pandas DataFrame and can be serialized and shared as
-a CSV file. Each row in the dataframe catalog corresponds to another intake catalog (refered
-to in this documentation as a "subcatalog") and the columns contain metadata associated with
+a CSV file. Each row in the dataframe catalog corresponds to another intake catalog (referred
+to in the context of intake-dataframe-catlog as a "subcatalog") and the columns contain metadata associated with
 each subcatalog that a user may want to peruse and/or search. The original use-case for
 intake-dataframe-catalog was to provide a user-friendly catalog of a large number
 [intake-esm](https://intake-esm.readthedocs.io/en/stable/) catalogs. intake-dataframe-catalog
