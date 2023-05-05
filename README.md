@@ -7,6 +7,7 @@ __________
 | :---: |  :---: |
 | **Package** | [![PyPI][PyPI-badge]][PyPI-link] |
 | **CI** | [![tests][ci-tests-badge]][ci-tests-link] [![pre-commit][ci-precommit-badge]][ci-precommit-link] |
+| **CD** | [![tests][cd-badge]][cd-link] |
 | **Development** | [![codecov][codecov-badge]][codecov-link] [![black][black-badge]][black-link] |
 | **License** | [![License][license-badge]][license-link] |
 
@@ -53,6 +54,8 @@ $ python -m pip install intake-dataframe-catalog
 [ci-tests-link]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/tests.yml
 [ci-precommit-badge]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/pre-commit.yml/badge.svg
 [ci-precommit-link]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/pre-commit.yml
+[cd-badge]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/release.yml/badge.svg
+[cd-link]: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/release.yml
 [codecov-badge]: https://codecov.io/gh/ACCESS-NRI/intake-dataframe-catalog/branch/main/graph/badge.svg?token=4EZNH1HYAN
 [codecov-link]: https://codecov.io/gh/ACCESS-NRI/intake-dataframe-catalog
 [black-badge]: https://img.shields.io/badge/code%20style-black-000000.svg
