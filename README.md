@@ -25,13 +25,15 @@ the subcatalogs that are most relevant to their work (e.g. "which subcatalogs co
 X and variable Y?"). Once a users has found the subcatalog(s) that interest them, they can
 load those subcatalogs and access the data they reference.
 
+See [the documentation](https://intake-dataframe-catalog.readthedocs.io/en/latest/?badge=latest) for more information.
+
 Why?
 ----
 
 Intake already provides the ability to
 [nest catalogs](https://intake.readthedocs.io/en/latest/catalog.html#catalog-nesting) and
 search across them. However, data discoverability is limited in the case of very large numbers
-of nested catalogs, and the search functionality does readily provide the ability to execute
+of nested catalogs, and the search functionality does not readily provide the ability to execute
 complex searches on nested catalog metadata. intake-dataframe-catalog aims to provide a very
 simple catalog of subcatalogs that emphasises subcatalog search and discoverability.
 
