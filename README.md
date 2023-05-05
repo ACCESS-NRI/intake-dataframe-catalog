@@ -4,7 +4,7 @@ A simple intake plugin for a searchable table of intake catalogs and associated 
 __________
 
 | Documentation | [![docs][docs-badge]][docs-link] |
-| ---|  --- |
+| :---: |  :---: |
 | **Package** | [![PyPI][PyPI-badge]][PyPI-link] |
 | **CI** | [![tests][ci-tests-badge]][ci-tests-link] [![pre-commit][ci-precommit-badge]][ci-precommit-link] |
 | **Development** | [![codecov][codecov-badge]][codecov-link] [![black][black-badge]][black-link] |

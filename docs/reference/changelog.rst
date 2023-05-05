@@ -3,6 +3,13 @@
 Changelog
 =========
 
+0.0.2
+-----
+
+Released 05/05/2023
+
+- Testing CD workflow
+
 0.0.1
 -----
 
