@@ -1,4 +1,4 @@
-name: Build distribution
+name: build distribution
 
 on: [push, pull_request]
 
