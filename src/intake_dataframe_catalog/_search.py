@@ -5,12 +5,13 @@
 
 import re
 import typing
+import itertools
 
 import numpy as np
 import pandas as pd
 
 
-def is_pattern(value: typing.Union[str, typing.Pattern]) -> bool:
+def _is_pattern(value: typing.Union[str, typing.Pattern]) -> bool:
     """
     Check whether the passed value is a pattern
 
@@ -34,7 +35,7 @@ def is_pattern(value: typing.Union[str, typing.Pattern]) -> bool:
 def _match_iterables(strings, pattern, regex):
     """
     Given an iterable of strings, return all that match the provided pattern
-    as a list.
+    as a set.
     """
     matches = []
     for string in strings:
@@ -75,54 +76,74 @@ def search(
     dataframe: :py:class:`~pandas.DataFrame`
             A new dataframe with the entries satisfying the query criteria.
     """
+
     df = df.copy()
-    groups = df[name_column]
-    n_groups = groups.nunique()
+
     if not query:
-        return pd.DataFrame(columns=df.columns)
-    global_mask = np.ones(len(df), dtype=bool)
-    has_all_mask = np.ones(n_groups, dtype=bool)
-    for column, values in query.items():
-        local_mask = np.zeros(len(df), dtype=bool)
-        has_mask = np.zeros(n_groups, dtype=bool)
-        column_is_stringtype = isinstance(
-            df[column].dtype, (object, pd.core.arrays.string_.StringDtype)
-        )
-        column_has_iterables = column in columns_with_iterables
+        return df
 
-        if column_has_iterables:
-            matched_iterables = pd.Series(np.empty((len(df), 0)).tolist(), name=column)
+    # 1. First create a mask for each query
+    searches = [(key, val) for key, vals in query.items() for val in vals]
+    search_matches = {column: {} for column in query.keys()}
 
-        for value in values:
-            if column_has_iterables:
-                matched = df[column].apply(
-                    lambda iters: _match_iterables(iters, value, is_pattern(value))
-                )
-                mask = matched.astype(bool)
-                matched_iterables += matched
-            elif column_is_stringtype and is_pattern(value):
-                mask = df[column].str.contains(value, regex=True, case=True, flags=0)
+    matched_iterables = pd.DataFrame()
+
+    for (column, value) in searches:
+
+        is_pattern = _is_pattern(value)
+
+        if column in columns_with_iterables:
+            matches = df[column].apply(
+                lambda values: _match_iterables(values, value, is_pattern)
+            )
+            match = matches.astype(bool)
+
+            # Keep track of which iterables matched
+            if column in matched_iterables.columns:
+                matched_iterables[column] = matched_iterables[column] + matches
             else:
-                mask = df[column] == value
-            local_mask = local_mask + mask
-            has_mask = has_mask + mask.groupby(groups).any().astype(int)
+                matched_iterables[column] = matches
 
-        mask = has_mask == len(values)
-        has_all_mask = has_all_mask & mask
+        elif is_pattern:
+            match = df[column].str.contains(value, regex=True, case=True, flags=0)
+        else:
+            match = df[column] == value
 
-        if column_has_iterables:
-            # Overwrite iterable entries with subset found
-            cast_type = type(df[column].iloc[0])
-            df.loc[
-                matched_iterables.loc[local_mask].index, column
-            ] = matched_iterables.loc[local_mask].apply(cast_type)
+        search_matches[column][value] = match
 
-        global_mask = global_mask & local_mask
+    # 2. Now combine the masks
+    conditions = set(itertools.product(*[tuple(v) for v in query.values()]))
+
+    groups = df[name_column]
+
+    global_match = np.zeros(len(df), dtype=bool)
+    n_conditions_in_group = np.zeros(groups.nunique(), dtype=bool)
+
+    for condition in conditions:
+
+        condition_match = np.ones(len(df), dtype=bool)
+
+        for column, value in zip(query.keys(), condition):
+
+            condition_match = condition_match & search_matches[column][value]
+
+        n_conditions_in_group = n_conditions_in_group + condition_match.groupby(
+            groups
+        ).any().astype(int)
+
+        global_match = global_match | condition_match
+
+    # 3. Replace queried columns with iterables with reduced versions
+    if not matched_iterables.empty:
+        types = {col: type(df[col].iloc[0]) for col in matched_iterables.columns}
+        df[matched_iterables.columns] = matched_iterables.apply(types)
 
     if require_all:
+        has_all = n_conditions_in_group == len(conditions)
         # Expand has_all_mask across all groups
-        has_all_mask = has_all_mask.loc[groups].reset_index(drop=True)
-        global_mask = global_mask & has_all_mask
+        has_all = has_all.loc[groups].reset_index(drop=True)
+        global_match = global_match & has_all
+    else:
+        global_match = global_match
 
-    results = df.loc[global_mask]
-    return results.reset_index(drop=True)
+    return df.loc[global_match]

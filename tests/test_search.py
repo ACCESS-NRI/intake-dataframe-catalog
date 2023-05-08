@@ -4,7 +4,7 @@ import pytest
 
 import pandas as pd
 
-from intake_dataframe_catalog._search import is_pattern, search
+from intake_dataframe_catalog._search import _is_pattern, search
 
 
 @pytest.mark.parametrize(
@@ -26,13 +26,47 @@ def test_is_pattern(value, expected):
     """
     Test is_pattern function
     """
-    assert is_pattern(value) == expected
+    assert _is_pattern(value) == expected
 
 
 @pytest.mark.parametrize(
     "query, expected",
     [
-        ({}, []),
+        (
+            {},
+            [
+                {
+                    "A": "aaa",
+                    "B": "a",
+                    "C": 0,
+                },
+                {
+                    "A": "aaa",
+                    "B": "b",
+                    "C": 1,
+                },
+                {
+                    "A": "aba",
+                    "B": "c",
+                    "C": 2,
+                },
+                {
+                    "A": "aba",
+                    "B": "a",
+                    "C": 3,
+                },
+                {
+                    "A": "abA",
+                    "B": "b",
+                    "C": 4,
+                },
+                {
+                    "A": "abA",
+                    "B": "c",
+                    "C": 5,
+                },
+            ],
+        ),
         (
             {"A": ["aaa"]},
             [
@@ -196,60 +230,132 @@ def test_search(query, expected):
             {"B": ["a", "b"], "D": [0]},
             False,
             [
-                {"A": "aaa", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0}},
-                {"A": "aba", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}},
-                {"A": "abA", "B": ["a"], "C": ("cx", "cy"), "D": {0}},
+                {"A": "cat0", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0}, "E": "xxx"},
+                {"A": "cat1", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}, "E": "xxx"},
+                {"A": "cat1", "B": ["a"], "C": ("cz", "cy"), "D": {0}, "E": "yyy"},
             ],
         ),
         (
             {"B": ["a", "b"], "D": [0, 1]},
             False,
             [
-                {"A": "aaa", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0, 1}},
-                {"A": "aba", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}},
-                {"A": "abA", "B": ["a"], "C": ("cx", "cy"), "D": {0, 1}},
+                {
+                    "A": "cat0",
+                    "B": ["a", "b"],
+                    "C": ("cx", "cy"),
+                    "D": {0, 1},
+                    "E": "xxx",
+                },
+                {"A": "cat1", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}, "E": "xxx"},
+                {"A": "cat1", "B": ["a"], "C": ("cz", "cy"), "D": {0, 1}, "E": "yyy"},
             ],
         ),
         (
             {"B": ["a", "b"], "D": [0]},
             True,
             [
-                {"A": "aaa", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0}},
-                {"A": "aba", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}},
+                {"A": "cat0", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0}, "E": "xxx"},
+                {"A": "cat1", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}, "E": "xxx"},
+                {"A": "cat1", "B": ["a"], "C": ("cz", "cy"), "D": {0}, "E": "yyy"},
             ],
         ),
         (
             {"B": ["a", "b"], "D": [0, 1]},
             True,
             [
-                {"A": "aaa", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0, 1}},
+                {
+                    "A": "cat0",
+                    "B": ["a", "b"],
+                    "C": ("cx", "cy"),
+                    "D": {0, 1},
+                    "E": "xxx",
+                },
             ],
         ),
         (
-            {"A": ["aba"], "B": ["c"], "C": ["cz"], "D": [2]},
+            {"C": ["cx", "cy"], "E": ["xxx"]},
+            False,
+            [
+                {
+                    "A": "cat0",
+                    "B": ["a", "b"],
+                    "C": ("cx", "cy"),
+                    "D": {0, 1},
+                    "E": "xxx",
+                },
+                {
+                    "A": "cat1",
+                    "B": ["a", "b", "c"],
+                    "C": ("cx",),
+                    "D": {0, 2},
+                    "E": "xxx",
+                },
+            ],
+        ),
+        (
+            {"C": ["cx", "cy"], "E": ["xxx"]},
             True,
             [
-                {"A": "aba", "B": ["c"], "C": ("cz",), "D": {2}},
+                {
+                    "A": "cat0",
+                    "B": ["a", "b"],
+                    "C": ("cx", "cy"),
+                    "D": {0, 1},
+                    "E": "xxx",
+                },
             ],
         ),
         (
-            {"A": ["aba"], "B": ["c"], "C": ["cz"], "D": [1]},
+            {"A": ["cat1"], "B": ["c"], "C": ["cz"], "D": [2]},
+            True,
+            [
+                {"A": "cat1", "B": ["c"], "C": ("cz",), "D": {2}, "E": "xxx"},
+            ],
+        ),
+        (
+            {"A": ["cat1"], "B": ["c"], "C": ["cx"], "D": [1]},
             True,
             [],
         ),
         (
-            {"A": ["a.*a"], "B": ["a", "c"], "C": ["c.*"]},
+            {"A": ["cat.*"], "B": ["a", "c"], "C": ["c.*"]},
             False,
             [
-                {"A": "aaa", "B": ["a"], "C": ("cx", "cy"), "D": {0, 1}},
-                {"A": "aba", "B": ["a", "c"], "C": ("cx", "cz"), "D": {0, 2}},
+                {"A": "cat0", "B": ["a"], "C": ("cx", "cy"), "D": {0, 1}, "E": "xxx"},
+                {
+                    "A": "cat1",
+                    "B": ["a", "c"],
+                    "C": ("cx", "cz"),
+                    "D": {0, 2},
+                    "E": "xxx",
+                },
+                {
+                    "A": "cat1",
+                    "B": ["a", "c"],
+                    "C": ("cz", "cy"),
+                    "D": {0, 1},
+                    "E": "yyy",
+                },
             ],
         ),
         (
-            {"A": ["a.*a"], "B": ["a", "c"], "C": ["c.*"]},
+            {"A": ["cat.*"], "B": ["a", "c"], "C": ["c.*"]},
             True,
             [
-                {"A": "aba", "B": ["a", "c"], "C": ("cx", "cz"), "D": {0, 2}},
+                {
+                    "A": "cat1",
+                    "B": ["a", "c"],
+                    "C": ("cx", "cz"),
+                    "D": {0, 2},
+                    "E": "xxx",
+                },
+                {
+                    "A": "cat1",
+                    "B": ["a", "c"],
+                    "C": ("cz", "cy"),
+                    "D": {0, 1},
+                    "E": "yyy",
+                },
             ],
         ),
     ],
@@ -257,10 +363,11 @@ def test_search(query, expected):
 def test_search_columns_with_iterables(query, require_all, expected):
     df = pd.DataFrame(
         {
-            "A": ["aaa", "aba", "abA"],
+            "A": ["cat0", "cat1", "cat1"],
             "B": [["a", "b"], ["a", "b", "c"], ["c", "d", "a"]],
-            "C": [("cx", "cy"), ("cx", "cz"), ("cx", "cy")],
+            "C": [("cx", "cy"), ("cx", "cz"), ("cz", "cy")],
             "D": [{0, 1}, {0, 2}, {0, 1}],
+            "E": ["xxx", "xxx", "yyy"],
         }
     )
     results = search(

@@ -265,8 +265,8 @@ def test_catalog_keys(catalog_path):
         ({"name": ["cesm", "cmip5"]}, False, 2),
         ({"name": ["cesm", "cmip5"]}, True, 0),
         ({"realm": "atmos", "name": "cesm"}, False, 0),
-        ({}, False, 0),
-        ({}, True, 0),
+        ({}, False, 4),
+        ({}, True, 4),
     ],
 )
 def test_catalog_search(catalog_path, query, require_all, expected_len):
