@@ -4,7 +4,7 @@ import pytest
 
 import pandas as pd
 
-from intake_dataframe_catalog._search import is_pattern, search
+from intake_dataframe_catalog._search import _is_pattern, search
 
 
 @pytest.mark.parametrize(
@@ -26,13 +26,47 @@ def test_is_pattern(value, expected):
     """
     Test is_pattern function
     """
-    assert is_pattern(value) == expected
+    assert _is_pattern(value) == expected
 
 
 @pytest.mark.parametrize(
     "query, expected",
     [
-        ({}, []),
+        (
+            {},
+            [
+                {
+                    "A": "aaa",
+                    "B": "a",
+                    "C": 0,
+                },
+                {
+                    "A": "aaa",
+                    "B": "b",
+                    "C": 1,
+                },
+                {
+                    "A": "aba",
+                    "B": "c",
+                    "C": 2,
+                },
+                {
+                    "A": "aba",
+                    "B": "a",
+                    "C": 3,
+                },
+                {
+                    "A": "abA",
+                    "B": "b",
+                    "C": 4,
+                },
+                {
+                    "A": "abA",
+                    "B": "c",
+                    "C": 5,
+                },
+            ],
+        ),
         (
             {"A": ["aaa"]},
             [
