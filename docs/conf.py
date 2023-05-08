@@ -19,7 +19,6 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
-    # "autoapi.extension",
     "nbsphinx",
     "sphinx_copybutton",
 ]
@@ -35,24 +34,6 @@ autodoc_member_order = "groupwise"
 numpydoc_show_class_members = True
 numpydoc_show_inherited_class_members = False
 numpydoc_class_members_toctree = False
-
-# Napoleon configurations
-# napoleon_google_docstring = False
-# napoleon_numpy_docstring = True
-# napoleon_use_param = False
-# napoleon_use_rtype = False
-# napoleon_preprocess_types = True
-
-# autoapi directives
-# autoapi_dirs = ["../src/intake_dataframe_catalog/"]
-# autoapi_add_toctree_entry = False
-# autoapi_ignore = ["**.ipynb_checkpoints"]
-# autoapi_options = [
-#     "members",
-#     "inherited-members",
-#     "show-inheritance",
-#     "show-module-summary",
-# ]
 
 master_doc = "index"
 
@@ -74,3 +55,7 @@ html_theme_options = {
     "use_edit_page_button": True,
     "github_url": "https://github.com/ACCESS-NRI/intake-dataframe-catalog",
 }
+
+# -- Options for Latex output -------------------------------------------------
+
+latex_use_xindy = False
