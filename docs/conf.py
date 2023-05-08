@@ -58,4 +58,5 @@ html_theme_options = {
 
 # -- Options for Latex output -------------------------------------------------
 
+# Don't know why, but need this after #18 for pdf to build successfully
 latex_use_xindy = False
