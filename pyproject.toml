@@ -42,3 +42,7 @@ versionfile_source = "src/intake_dataframe_catalog/_version.py"
 versionfile_build = "intake_dataframe_catalog/_version.py"
 tag_prefix = "v"
 parentdir_prefix = "intake-dataframe-catalog-"
+
+[tool.coverage.run]
+omit = "src/intake_dataframe_catalog/_version.py"
+  
