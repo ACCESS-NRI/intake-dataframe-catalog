@@ -1,0 +1,36 @@
+package:
+  name: intake-dataframe-catalog
+  version: "{{ environ['GIT_DESCRIBE_TAG'] }}"
+
+source:
+  git_url: https://github.com/ACCESS-NRI/intake-dataframe-catalog
+
+build:
+  noarch: python
+  number: "{{ environ['GIT_DESCRIBE_NUMBER'] }}"
+  script: "{{ PYTHON }} -m pip install . -vv"
+
+requirements:
+  host:
+    - python
+    - pip
+    - versioneer
+  run:
+    - python >=3.9
+    - intake
+    - pandas
+
+test:
+  imports:
+    - intake_dataframe_catalog
+
+about:
+  home: https://github.com/ACCESS-NRI/intake-dataframe-catalog
+  license: Apache Software
+  license_family: APACHE
+  summary: "An intake driver for a searchable table of intake catalogs and associated metadata"
+  doc_url: https://intake-dataframe-catalog.readthedocs.io/en/latest/?badge=latest
+
+extra:
+  recipe-maintainers:
+    - dougiesquire
