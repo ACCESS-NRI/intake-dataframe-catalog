@@ -1,5 +1,5 @@
 {% set name = "intake-dataframe-catalog" %}
-{% set version = "environ['GIT_DESCRIBE_TAG']" %}
+{% set version = "{{ environ['GIT_DESCRIBE_TAG'] }}" %}
 
 package:
   name: "{{ name|lower }}"
