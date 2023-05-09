@@ -4,7 +4,7 @@ authors = [
     { name = "ACCESS-NRI" },
 ]
 description = "An intake driver for a searchable table of intake catalogs and associated metadata"
-readme = "README.md"
+readme = "README.rst"
 requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
 classifiers = [
