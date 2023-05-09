@@ -4,7 +4,11 @@ on: [push, workflow_dispatch]
 
 jobs:
   conda:
+    name: conda build with Python ${{ matrix.python-version }}
     runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
 
     steps:
       - name: Checkout source
@@ -14,7 +18,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           miniconda-version: "latest"
-          python-version: 3.11
+          python-version: ${{ matrix.python-version }}
           environment-file: .conda/environment.yml
           auto-update-conda: false
           auto-activate-base: false
@@ -24,7 +28,7 @@ jobs:
         uses: uibcdf/action-build-and-upload-conda-packages@v1.2.0
         with:
           meta_yaml_dir: .conda
-          python-version: 3.11
+          python-version: ${{ matrix.python-version }}
           user: dougiesquire
           label: main
           token: ${{ secrets.ANACONDA_TOKEN }} # Replace with the right name of your secret
