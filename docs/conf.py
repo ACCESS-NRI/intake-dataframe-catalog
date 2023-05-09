@@ -19,7 +19,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
-    "nbsphinx",
+    "myst_nb",
     "sphinx_copybutton",
 ]
 
@@ -39,6 +39,9 @@ master_doc = "index"
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"
+
+# Config myst-nb
+nb_execution_excludepatterns = ["quickstart.ipynb"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

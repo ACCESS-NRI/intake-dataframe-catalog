@@ -5,7 +5,6 @@ channels:
 dependencies:
   - python==3.11
   - ipython
-  - nbsphinx
   - numpydoc
   - sphinx
   - sphinx-autobuild
@@ -17,5 +16,6 @@ dependencies:
     - sphinx-book-theme
     - sphinxcontrib-napoleon
     - sphinx-copybutton
+    - myst-nb
     - pre-commit
     - -e ..
