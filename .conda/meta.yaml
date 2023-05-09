@@ -1,12 +1,11 @@
 {% set name = "intake-dataframe-catalog" %}
-{% set version = "{{ environ['GIT_DESCRIBE_TAG'] }}" %}
 
 package:
   name: "{{ name|lower }}"
-  version: "{{ version }}"
+  version: "{{ environ['GIT_DESCRIBE_TAG'] }}"
 
 source:
-  url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"
+  url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ environ['GIT_DESCRIBE_TAG'] }}.tar.gz"
   sha256: e6b91cbe059b722151f239a70e5b7f75a4dba9c330121461fff9ad480421cac4
 
 build:
