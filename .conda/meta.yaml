@@ -1,0 +1,37 @@
+{% set name = "intake-dataframe-catalog" %}
+{% set version = "environ['GIT_DESCRIBE_TAG']" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+source:
+  url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"
+  sha256: e6b91cbe059b722151f239a70e5b7f75a4dba9c330121461fff9ad480421cac4
+
+build:
+  noarch: python
+  number: "environ['GIT_DESCRIBE_NUMBER']"
+  script: "{{ PYTHON }} -m pip install . -vv"
+
+requirements:
+  host:
+    - pip
+    - python
+  run:
+    - python
+
+test:
+  imports:
+    - "{{ name|lower }}"
+
+about:
+  home: https://github.com/ACCESS-NRI/intake-dataframe-catalog
+  license: Apache Software
+  license_family: APACHE
+  summary: "An intake driver for a searchable table of intake catalogs and associated metadata"
+  doc_url: https://intake-dataframe-catalog.readthedocs.io/en/latest/?badge=latest
+
+extra:
+  recipe-maintainers:
+    - dougiesquire
