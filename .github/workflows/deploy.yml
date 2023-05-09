@@ -45,6 +45,7 @@ jobs:
       - name: Get package version
         run: |
           echo "VERSION=$(python setup.py --version)" >> "$GITHUB_ENV"
+	  cat $GITHUB_ENV
       
       - name: Set version in meta.yaml
         run: |
