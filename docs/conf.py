@@ -19,8 +19,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
-    # "autoapi.extension",
-    "nbsphinx",
+    "myst_nb",
     "sphinx_copybutton",
 ]
 
@@ -36,28 +35,13 @@ numpydoc_show_class_members = True
 numpydoc_show_inherited_class_members = False
 numpydoc_class_members_toctree = False
 
-# Napoleon configurations
-# napoleon_google_docstring = False
-# napoleon_numpy_docstring = True
-# napoleon_use_param = False
-# napoleon_use_rtype = False
-# napoleon_preprocess_types = True
-
-# autoapi directives
-# autoapi_dirs = ["../src/intake_dataframe_catalog/"]
-# autoapi_add_toctree_entry = False
-# autoapi_ignore = ["**.ipynb_checkpoints"]
-# autoapi_options = [
-#     "members",
-#     "inherited-members",
-#     "show-inheritance",
-#     "show-module-summary",
-# ]
-
 master_doc = "index"
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"
+
+# Config myst-nb
+nb_execution_excludepatterns = ["quickstart.ipynb"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
@@ -74,3 +58,8 @@ html_theme_options = {
     "use_edit_page_button": True,
     "github_url": "https://github.com/ACCESS-NRI/intake-dataframe-catalog",
 }
+
+# -- Options for Latex output -------------------------------------------------
+
+# Don't know why, but need this after #18 for pdf to build successfully
+latex_use_xindy = False
