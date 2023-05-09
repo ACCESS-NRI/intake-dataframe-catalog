@@ -4,12 +4,10 @@
 import ast
 from io import UnsupportedOperation
 
-import pytest
-
-import xarray as xr
-import pandas as pd
-
 import intake
+import pandas as pd
+import pytest
+import xarray as xr
 from intake.source.csv import CSVSource
 from intake_esm.core import esm_datastore
 

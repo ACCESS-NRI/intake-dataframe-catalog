@@ -10,7 +10,7 @@ dependencies:
   - sphinx-autobuild
   - pandas
   - black
-  - flake8
+  - ruff
   - pip
   - pip:
     - sphinx-book-theme

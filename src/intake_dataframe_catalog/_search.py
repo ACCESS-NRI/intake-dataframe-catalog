@@ -3,15 +3,15 @@
 
 # Stolen and adapted from https://github.com/intake/intake-esm/blob/main/intake_esm/_search.py
 
+import itertools
 import re
 import typing
-import itertools
 
 import numpy as np
 import pandas as pd
 
 
-def _is_pattern(value: typing.Union[str, typing.Pattern]) -> bool:
+def _is_pattern(value: str | typing.Pattern) -> bool:
     """
     Check whether the passed value is a pattern
 

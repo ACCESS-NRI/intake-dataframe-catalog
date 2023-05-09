@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - black
-  - flake8
+  - ruff
   - intake
   - intake-esm
   - pytest

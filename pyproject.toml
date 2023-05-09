@@ -47,4 +47,50 @@ parentdir_prefix = "intake-dataframe-catalog-"
 omit = [
     "src/intake_dataframe_catalog/_version.py",
 ]
-  
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+# E402: module level import not at top of file
+# E501: line too long - let black worry about that
+ignore = [
+    "E402",
+    "E501",
+]
+select = [
+    # Pyflakes
+    "F",
+    # Pycodestyle
+    "E",
+    "W",
+    # isort
+    "I",
+    # Pyupgrade
+    "UP",
+]
+
+[tool.ruff.mccabe]
+max-complexity = 18
+
+[tool.ruff.isort]
+known-first-party = ["intake_dataframe_catalog"]
+
