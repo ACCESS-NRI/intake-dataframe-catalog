@@ -51,8 +51,8 @@ jobs:
       - name: Set version in meta.yaml
         shell: bash -l {0}
         run: |
-          sed -i s/__VERSION__/${{ env.VERSION }}/g .conda/meta.yaml
-	  cat .conda/meta.yaml
+          sed -i "s/__VERSION__/${{ env.VERSION }}/g" .conda/meta.yaml
+          cat .conda/meta.yaml
 
       - name: Setup conda environment
         uses: conda-incubator/setup-miniconda@v2
