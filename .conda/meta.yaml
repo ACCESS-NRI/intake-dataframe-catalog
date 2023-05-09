@@ -1,20 +1,21 @@
+{% set version = "__VERSION__" %} # To be replaced in gh action
+
 package:
   name: intake-dataframe-catalog
-  version: "{{ environ['GIT_DESCRIBE_TAG'] }}"
+  version: "{{ version }}"
 
 source:
-  git_url: https://github.com/ACCESS-NRI/intake-dataframe-catalog
+  url: "https://pypi.io/packages/source/i/intake-dataframe-catalog/intake_dataframe_catalog-{{ version }}.tar.gz"
 
 build:
   noarch: python
-  number: "{{ environ['GIT_DESCRIBE_NUMBER'] }}"
+  number: 0
   script: "{{ PYTHON }} -m pip install . -vv"
 
 requirements:
   host:
     - python
     - pip
-    - tomli # needed for Python=3.9
     - versioneer
   run:
     - python >=3.9
