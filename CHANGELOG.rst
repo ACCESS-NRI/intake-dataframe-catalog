@@ -3,12 +3,19 @@
 Changelog
 =========
 
+0.0.5
+-----
+
+Released 09/05/2023
+
+- Another attempt at conda CD. By `Dougie Squire <https://github.com/dougiesquire>`_.
+
 0.0.4
 -----
 
 Released 09/05/2023
 
-- Add CD to conda (:pull:`21`). By `Dougie Squire <https://github.com/dougiesquire>`_.
+- Failed attempt at conda CD (:pull:`21`). By `Dougie Squire <https://github.com/dougiesquire>`_.
 
 0.0.3
 -----
