@@ -6,9 +6,9 @@ Changelog
 0.0.4
 -----
 
-Not yet released
+Released 09/05/2023
 
-- Tidied documentation (:pull:`18`). By `Dougie Squire <https://github.com/dougiesquire>`_.
+- Add CD to conda (:pull:`21`). By `Dougie Squire <https://github.com/dougiesquire>`_.
 
 0.0.3
 -----
