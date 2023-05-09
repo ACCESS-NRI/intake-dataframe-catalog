@@ -1,0 +1,31 @@
+name: test conda build
+
+on: [workflow_dispatch]
+
+jobs:
+  conda:
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Setup conda environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          python-version: 3.11
+          environment-file: .conda/environment.yml
+          auto-update-conda: false
+          auto-activate-base: false
+          show-channel-urls: true
+
+      - name: Build and upload the conda package
+        uses: uibcdf/action-build-and-upload-conda-packages@v1.2.0
+        with:
+          meta_yaml_dir: .conda/meta
+          python-version: 3.11
+          user: dougiesquire
+          label: auto
+          token: ${{ secrets.ANACONDA_TOKEN }} # Replace with the right name of your secret
+
