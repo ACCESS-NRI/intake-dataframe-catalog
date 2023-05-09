@@ -1,28 +1,28 @@
-{% set name = "intake-dataframe-catalog" %}
-
 package:
-  name: "{{ name|lower }}"
-  version: "{{ GIT_DESCRIBE_TAG }}"
+  name: intake-dataframe-catalog
+  version: "{{ environ['GIT_DESCRIBE_TAG'] }}"
 
 source:
-  url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ GIT_DESCRIBE_TAG }}.tar.gz"
-  sha256: e6b91cbe059b722151f239a70e5b7f75a4dba9c330121461fff9ad480421cac4
+  git_url: https://github.com/ACCESS-NRI/intake-dataframe-catalog
 
 build:
   noarch: python
-  number: "environ['GIT_DESCRIBE_NUMBER']"
+  number: "{{ environ['GIT_DESCRIBE_NUMBER'] }}"
   script: "{{ PYTHON }} -m pip install . -vv"
 
 requirements:
   host:
+    - python
     - pip
-    - python
+    - versioneer
   run:
-    - python
+    - python >=3.9
+    - intake
+    - pandas
 
 test:
   imports:
-    - "{{ name|lower }}"
+    - intake_dataframe_catalog
 
 about:
   home: https://github.com/ACCESS-NRI/intake-dataframe-catalog

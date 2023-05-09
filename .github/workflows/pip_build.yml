@@ -1,4 +1,4 @@
-name: build distribution
+name: pip build
 
 on: [push, pull_request]
 
