@@ -3,8 +3,9 @@
 
 import os
 from distutils import dir_util
-from pytest import fixture
 from pathlib import Path
+
+from pytest import fixture
 
 here = os.path.abspath(os.path.dirname(__file__))
 

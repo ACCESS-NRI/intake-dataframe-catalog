@@ -2,16 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import ast
-import tlz
 import typing
 import warnings
 from io import UnsupportedOperation
 
-import yaml
 import fsspec
-import pandas as pd
-
 import intake
+import pandas as pd
+import tlz
+import yaml
 from intake.catalog import Catalog
 from intake.catalog.local import LocalCatalogEntry
 
