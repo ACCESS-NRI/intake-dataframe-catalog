@@ -50,11 +50,11 @@ simple catalog of subcatalogs that emphasises subcatalog search and discoverabil
         
 .. |pypi| image:: https://img.shields.io/pypi/v/intake-dataframe-catalog
         :target: https://pypi.org/project/intake-dataframe-catalog/
-        :alt: Python Package Index Build
+        :alt: PyPI package
         
-.. |conda| image:: https://anaconda.org/accessnri/intake-dataframe-catalog/badges/version.svg
+.. |conda| image:: https://img.shields.io/conda/v/accessnri/intake-dataframe-catalog
         :target: https://anaconda.org/accessnri/intake-dataframe-catalog
-        :alt: Conda Build
+        :alt: Conda package
 
 .. |ci| image:: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/ci.yml/badge.svg
         :target: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/ci.yml
