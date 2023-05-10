@@ -9,11 +9,11 @@ intake-dataframe-catalog
 +---------------+----------------------+
 | Documentation | |docs|               |
 +---------------+----------------------+
-| Package       | |pypi|               |
+| Package       | |pypi| |conda|       |
 +---------------+----------------------+
-| CI            | |tests| |pre-commit| |
+| CI            | |ci|                 |
 +---------------+----------------------+
-| CD            | |build|              |
+| CD            | |cd|                 |
 +---------------+----------------------+
 | Development   | |codecov| |black|    |
 +---------------+----------------------+
@@ -54,17 +54,17 @@ simple catalog of subcatalogs that emphasises subcatalog search and discoverabil
         :target: https://pypi.org/project/intake-dataframe-catalog/
         :alt: Python Package Index Build
         
-.. |tests| image:: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/tests.yml/badge.svg
-        :target: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/tests.yml
-        :alt: Package test status
+.. |conda| image:: https://anaconda.org/accessnri/intake-dataframe-catalog/badges/version.svg
+        :target: https://anaconda.org/accessnri/intake-dataframe-catalog
+        :alt: Conda Build
+
+.. |ci| image:: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/ci.yml/badge.svg
+        :target: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/ci.yml
+        :alt: Package CI test status
         
-.. |pre-commit| image:: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/pre-commit.yml/badge.svg
-        :target: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/pre-commit.yml
-        :alt: Package pre-commit status
-        
-.. |build| image:: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/release.yml/badge.svg
-        :target: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/release.yml
-        :alt: Build distribution status
+.. |cd| image:: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/cd.yml/badge.svg
+        :target: https://github.com/ACCESS-NRI/intake-dataframe-catalog/actions/workflows/cd.yml
+        :alt: Package CD status
         
 .. |codecov| image:: https://codecov.io/gh/ACCESS-NRI/intake-dataframe-catalog/branch/main/graph/badge.svg?token=4EZNH1HYAN
         :target: https://codecov.io/gh/ACCESS-NRI/intake-dataframe-catalog
