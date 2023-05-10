@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 
-def _is_pattern(value) -> bool:
+def _is_pattern(value: typing.Union[str, typing.Pattern]) -> bool:
     """
     Check whether the passed value is a pattern
 
@@ -32,7 +32,9 @@ def _is_pattern(value) -> bool:
         return False
 
 
-def _match_iterables(strings: list | tuple | set, pattern: str, regex: bool):
+def _match_iterables(
+    strings: typing.Union[list, tuple, set], pattern: str, regex: bool
+):
     """
     Given an iterable of strings, return all that match the provided pattern
     as a set.
