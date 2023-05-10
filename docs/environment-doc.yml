@@ -10,9 +10,9 @@ dependencies:
   - sphinx-autobuild
   - pandas
   - black
-  - ruff
   - pip
   - pip:
+    - ruff
     - sphinx-book-theme
     - sphinxcontrib-napoleon
     - sphinx-copybutton
