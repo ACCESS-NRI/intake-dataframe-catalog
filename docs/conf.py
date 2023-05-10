@@ -58,8 +58,3 @@ html_theme_options = {
     "use_edit_page_button": True,
     "github_url": "https://github.com/ACCESS-NRI/intake-dataframe-catalog",
 }
-
-# -- Options for Latex output -------------------------------------------------
-
-# Don't know why, but need this after #18 for pdf to build successfully
-latex_use_xindy = False
