@@ -42,23 +42,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v3
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
-
-      - name: Get package version
-        shell: bash -l {0}
-        run: |
-          echo "VERSION=$(python setup.py --version)" >> "$GITHUB_ENV"
-          cat $GITHUB_ENV
-      
-      - name: Set version in meta.yaml
-        shell: bash -l {0}
-        run: |
-          sed -i "s/__VERSION__/${{ env.VERSION }}/g" .conda/meta.yaml
-          cat .conda/meta.yaml
-
       - name: Setup conda environment
         uses: conda-incubator/setup-miniconda@v2
         with:
