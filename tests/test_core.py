@@ -95,7 +95,7 @@ def test_column_name_error(catalog_path):
             mode="r",
         )
     assert (
-        "Please provide the name of the column containing intake YAML descriptions"
+        "Please provide the name of the column containing the intake source YAML descriptions"
         in str(excinfo.value)
     )
 
@@ -314,9 +314,7 @@ def test_catalog_add(catalog_path, source_path):
 
     with pytest.raises(DfFileCatalogError) as excinfo:
         cat.add(gistemp, metadata={"realm": "atmos", "variable": ["tas"]})
-    assert "Cannot add an unnamed catalog to the dataframe catalog" in str(
-        excinfo.value
-    )
+    assert "Cannot add an unnamed source to the dataframe catalog" in str(excinfo.value)
 
     gistemp.name = "gistemp"
     cat.add(gistemp, metadata={"realm": "atmos", "variable": ["tas"]})
