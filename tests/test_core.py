@@ -682,6 +682,27 @@ def test_subclassing_catalog(catalog_path):
     assert type(scat) is ChildCatalog
 
 
+def test_to_subcatalog_depreciated(catalog_path):
+    cat = intake.open_df_catalog(
+        path=str(catalog_path / "dfcat.csv"),
+        columns_with_iterables=["variable"],
+        mode="a",
+    )
+
+    with pytest.warns(
+        DeprecationWarning,
+        match="This method will be depreciated in the next release",
+    ):
+        cat.to_subcatalog_dict()
+
+    cat_new = cat.search(name="cesm")
+    with pytest.warns(
+        DeprecationWarning,
+        match="This method will be depreciated in the next release",
+    ):
+        cat_new.to_subcatalog()
+
+
 def _assert_DfFileCatalog(cat, empty=False):
     """
     Assert that the input is a DfFileCatalog
