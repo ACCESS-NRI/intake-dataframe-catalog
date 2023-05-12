@@ -8,6 +8,8 @@ Changelog
 
 Not yet released
 
+- update descriptions of this package to be more correct (:issue:`27`, :pull:`28`).
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
 - use :code:`load_setup_py_data` from :code:`conda-build` to template version in meta.yaml.
   By `Dougie Squire <https://github.com/dougiesquire>`_.
 

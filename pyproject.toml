@@ -3,7 +3,7 @@ name = "intake_dataframe_catalog"
 authors = [
     { name = "ACCESS-NRI" },
 ]
-description = "An intake driver for a searchable table of intake catalogs and associated metadata"
+description = "An intake driver for a searchable table of intake sources and associated metadata"
 readme = "README.rst"
 requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
