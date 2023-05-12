@@ -38,7 +38,7 @@ Why?
 Intake already provides the ability to 
 `nest sources in a catalog <https://intake.readthedocs.io/en/latest/catalog.html#catalog-nesting>`_ 
 and search across them. However, data discoverability is limited in the case of very large numbers
-of nested sources, and the search functionality does readily provide the ability to execute 
+of nested sources, and the search functionality does not readily provide the ability to execute 
 complex searches on nested source metadata. intake-dataframe-catalog aims to provide a very
 simple catalog of intake sources that emphasises source search and discoverability.
     
