@@ -1,4 +1,5 @@
-{% set version = "__VERSION__" %} # To be replaced in gh action
+{% set data = load_setup_py_data() %}
+{% set version = data.get('version')  %}
 
 package:
   name: intake-dataframe-catalog
@@ -30,7 +31,7 @@ about:
   home: https://github.com/ACCESS-NRI/intake-dataframe-catalog
   license: Apache Software
   license_family: APACHE
-  summary: "An intake driver for a searchable table of intake catalogs and associated metadata"
+  summary: "An intake driver for a searchable table of intake sources and associated metadata"
   doc_url: https://intake-dataframe-catalog.readthedocs.io/en/latest/?badge=latest
 
 extra:

@@ -4,12 +4,10 @@
 import ast
 from io import UnsupportedOperation
 
-import pytest
-
-import xarray as xr
-import pandas as pd
-
 import intake
+import pandas as pd
+import pytest
+import xarray as xr
 from intake.source.csv import CSVSource
 from intake_esm.core import esm_datastore
 
@@ -97,7 +95,7 @@ def test_column_name_error(catalog_path):
             mode="r",
         )
     assert (
-        "Please provide the name of the column containing intake YAML descriptions"
+        "Please provide the name of the column containing the intake source YAML descriptions"
         in str(excinfo.value)
     )
 
@@ -107,8 +105,9 @@ def test_column_name_error(catalog_path):
             name_column="bar",
             mode="r",
         )
-    assert "Please provide the name of the column containing subcatalog names" in str(
-        excinfo.value
+    assert (
+        "Please provide the name of the column containing the intake source names"
+        in str(excinfo.value)
     )
 
 
@@ -228,7 +227,7 @@ def test_catalog_unique(catalog_path, query, expected_unique, expected_nunique):
 
 def test_catalog_contains(catalog_path):
     """
-    Test subcat in cat operations
+    Test source in cat operations
     """
     cat = intake.open_df_catalog(
         str(catalog_path / "dfcat.csv"),
@@ -306,7 +305,7 @@ def test_bad_search(catalog_path):
 
 def test_catalog_add(catalog_path, source_path):
     """
-    Test adding subcatalogs to the catalog
+    Test adding sources to the catalog
     """
     cat = intake.open_df_catalog(str(catalog_path / "tmp.csv"), mode="w")
 
@@ -315,9 +314,7 @@ def test_catalog_add(catalog_path, source_path):
 
     with pytest.raises(DfFileCatalogError) as excinfo:
         cat.add(gistemp, metadata={"realm": "atmos", "variable": ["tas"]})
-    assert "Cannot add an unnamed catalog to the dataframe catalog" in str(
-        excinfo.value
-    )
+    assert "Cannot add an unnamed source to the dataframe catalog" in str(excinfo.value)
 
     gistemp.name = "gistemp"
     cat.add(gistemp, metadata={"realm": "atmos", "variable": ["tas"]})
@@ -343,7 +340,7 @@ def test_catalog_add(catalog_path, source_path):
 
 def test_catalog_remove(catalog_path):
     """
-    Test removing subcatalogs from the catalog
+    Test removing sources from the catalog
     """
     cat = intake.open_df_catalog(
         str(catalog_path / "dfcat.csv"),
@@ -359,7 +356,7 @@ def test_catalog_remove(catalog_path):
 
 def test_catalog_add_remove(catalog_path, source_path):
     """
-    Test adding and removing subcatalogs to the catalog
+    Test adding and removing sources to the catalog
     """
     cat = intake.open_df_catalog(str(catalog_path / "tmp.csv"), mode="w")
 
@@ -400,10 +397,10 @@ def test_use_metadata_name(catalog_path, source_path):
         str(catalog_path / "tmp.csv"),
         mode="w",
     )
-    subcat = intake.open_csv(str(source_path / "gistemp.csv"))
-    subcat.name = "gistemp"
+    source = intake.open_csv(str(source_path / "gistemp.csv"))
+    source.name = "gistemp"
 
-    cat.add(subcat, metadata={"name": "new_name"})
+    cat.add(source, metadata={"name": "new_name"})
     assert "new_name" in cat
     assert "gistemp" not in cat
 
@@ -419,7 +416,7 @@ def test_use_metadata_name(catalog_path, source_path):
 )
 def test_catalog_getitem(catalog_path, key, expected):
     """
-    Test getting subcatalogs from catalog
+    Test getting sources from catalog
     """
     cat = intake.open_df_catalog(
         str(catalog_path / "dfcat.csv"),
@@ -503,9 +500,9 @@ def test_catalog_save(catalog_path, method, kwargs):
         {},
     ],
 )
-def test_to_subcatalog(catalog_path, kwargs):
+def test_to_source(catalog_path, kwargs):
     """
-    Test to_subcatalog and to_subcatalog_dict methods
+    Test to_source and to_source_dict methods
     """
     cat = intake.open_df_catalog(
         path=str(catalog_path / "dfcat.csv"),
@@ -514,32 +511,32 @@ def test_to_subcatalog(catalog_path, kwargs):
     )
 
     with pytest.raises(ValueError) as excinfo:
-        cat.to_subcatalog(**kwargs)
-    assert "Expected exactly one subcatalog" in str(excinfo.value)
+        cat.to_source(**kwargs)
+    assert "Expected exactly one source" in str(excinfo.value)
 
-    cat.to_subcatalog_dict(**kwargs)
+    cat.to_source_dict(**kwargs)
 
     cat_new = cat.search(name="cesm")
-    cat_new.to_subcatalog(**kwargs)
+    cat_new.to_source(**kwargs)
 
 
 def test_empty_catalog(catalog_path):
     """
-    Test warning when trying to load subcatalog from empty catalog
+    Test warning when trying to load source from empty catalog
     """
     cat = intake.open_df_catalog(path=str(catalog_path / "tmp.csv"), mode="w")
 
     with pytest.warns(
         UserWarning,
-        match=r"There are no subcatalogs to open. Returning an empty dictionary.",
+        match=r"There are no sources to open. Returning an empty dictionary.",
     ):
-        subcats = cat.to_subcatalog_dict()
-        assert not subcats
+        sources = cat.to_source_dict()
+        assert not sources
 
 
-def test_read_subcatalog(catalog_path):
+def test_read_source(catalog_path):
     """
-    Test reading data from subcatalogs
+    Test reading data from sources
     """
     from distributed import Client
 
@@ -629,10 +626,10 @@ def test_df_summary(catalog_path, source_path, metadata, expected_dict):
         str(catalog_path / "tmp.csv"),
         mode="w",
     )
-    subcat = intake.open_csv(str(source_path / "gistemp.csv"))
+    source = intake.open_csv(str(source_path / "gistemp.csv"))
 
     for meta in metadata:
-        cat.add(subcat, metadata=meta)
+        cat.add(source, metadata=meta)
 
     assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
 
@@ -645,21 +642,21 @@ def test_df_summary_update(catalog_path, source_path):
         str(catalog_path / "tmp.csv"),
         mode="w",
     )
-    subcat = intake.open_csv(str(source_path / "gistemp.csv"))
-    subcat.name = "gistemp"
+    source = intake.open_csv(str(source_path / "gistemp.csv"))
+    source.name = "gistemp"
 
     expected_dict = {"columns": [], "data": []}
     assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
 
-    cat.add(subcat, metadata={"meta0": "a", "meta1": "b"})
+    cat.add(source, metadata={"meta0": "a", "meta1": "b"})
     expected_dict = {"columns": ["meta0", "meta1"], "data": [[{"a"}, {"b"}]]}
     assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
 
-    cat.add(subcat, metadata={"meta0": "c", "meta1": "d"})
+    cat.add(source, metadata={"meta0": "c", "meta1": "d"})
     expected_dict = {"columns": ["meta0", "meta1"], "data": [[{"a", "c"}, {"b", "d"}]]}
     assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
 
-    cat.add(subcat, metadata={"meta0": "c", "meta1": "d"}, overwrite=True)
+    cat.add(source, metadata={"meta0": "c", "meta1": "d"}, overwrite=True)
     expected_dict = {"columns": ["meta0", "meta1"], "data": [[{"c"}, {"d"}]]}
     assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
 
@@ -683,6 +680,27 @@ def test_subclassing_catalog(catalog_path):
     )
     scat = cat.search(variable="tas")
     assert type(scat) is ChildCatalog
+
+
+def test_to_subcatalog_depreciated(catalog_path):
+    cat = intake.open_df_catalog(
+        path=str(catalog_path / "dfcat.csv"),
+        columns_with_iterables=["variable"],
+        mode="a",
+    )
+
+    with pytest.warns(
+        DeprecationWarning,
+        match="This method will be depreciated in the next release",
+    ):
+        cat.to_subcatalog_dict()
+
+    cat_new = cat.search(name="cesm")
+    with pytest.warns(
+        DeprecationWarning,
+        match="This method will be depreciated in the next release",
+    ):
+        cat_new.to_subcatalog()
 
 
 def _assert_DfFileCatalog(cat, empty=False):

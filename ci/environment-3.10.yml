@@ -3,13 +3,15 @@ channels:
   - conda-forge
 dependencies:
   - black
-  - flake8
   - intake
   - intake-esm
   - pytest
   - python=3.10
   - pip
   - pip:
+    - build
+    - ruff
     - codecov
     - pre-commit
     - pytest-cov
+    - twine

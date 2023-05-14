@@ -2,16 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import ast
-import tlz
 import typing
 import warnings
 from io import UnsupportedOperation
+from warnings import warn
 
-import yaml
 import fsspec
-import pandas as pd
-
 import intake
+import pandas as pd
+import tlz
+import yaml
 from intake.catalog import Catalog
 from intake.catalog.local import LocalCatalogEntry
 
@@ -28,13 +28,13 @@ class DfFileCatalogError(Exception):
 
 class DfFileCatalog(Catalog):
     """
-    A table of intake (sub)catalogs and associated metadata.
+    A table of intake sources and associated metadata.
     """
 
     version = __version__
     container = "catalog"
     partition_access = None
-    name = "dataframe_file_cat"
+    name = "dataframe_catalog"
 
     def __init__(
         self,
@@ -56,9 +56,9 @@ class DfFileCatalog(Catalog):
             Path to the dataframe catalog file.
         yaml_column: str, optional
             Name of the column in the dataframe catalog file containing intake yaml descriptions of the
-            intake (sub)catalogs.
+            intake sources.
         name_column: str, optional
-            Name of the column in the dataframe catalog file containing the names of the intake (sub)catalogs.
+            Name of the column in the dataframe catalog file containing the names of the intake sources.
         mode: str, optional
             The access mode. Options are:
             - `r` for read-only; no data can be modified.
@@ -128,13 +128,13 @@ class DfFileCatalog(Catalog):
                 if self.yaml_column not in self.df.columns:
                     raise DfFileCatalogError(
                         f"'{self.yaml_column}' is not a column in the dataframe catalog. Please provide "
-                        "the name of the column containing intake YAML descriptions via argument "
-                        "`yaml_column`."
+                        "the name of the column containing the intake source YAML descriptions via "
+                        "argument `yaml_column`."
                     )
                 if self.name_column not in self.df.columns:
                     raise DfFileCatalogError(
                         f"'{self.name_column}' is not a column in the dataframe catalog. Please provide "
-                        "the name of the column containing subcatalog names via argument "
+                        "the name of the column containing the intake source names via argument "
                         "`name_column`."
                     )
 
@@ -169,12 +169,12 @@ class DfFileCatalog(Catalog):
                 ).get()
                 return self._entries[key]
             raise KeyError(
-                f"key='{key}' not found in catalog. You can access the list of valid keys via the .keys() method."
+                f"key='{key}' not found in catalog. You can access the list of valid source keys via the .keys() method."
             ) from e
 
     def __repr__(self) -> str:
         return (
-            f"<{self.name or 'Intake dataframe'} catalog with {len(self)} subcatalog(s) across "
+            f"<{self.name or 'Intake dataframe'} catalog with {len(self)} source(s) across "
             f"{len(self.df)} rows>"
         )
 
@@ -186,7 +186,7 @@ class DfFileCatalog(Catalog):
         text = self.df_summary._repr_html_()
 
         return (
-            f"<p><strong>{self.name or 'Intake dataframe'} catalog with {len(self)} subcatalog(s) across "
+            f"<p><strong>{self.name or 'Intake dataframe'} catalog with {len(self)} source(s) across "
             f"{len(self.df)} rows</strong>:</p> {text}"
         )
 
@@ -201,7 +201,7 @@ class DfFileCatalog(Catalog):
 
     def keys(self) -> list[str]:
         """
-        Return a list of keys for the dataframe catalog entries (subcatalogs).
+        Return a list of keys for the dataframe catalog entries (sources).
         """
         return self.unique()[self.name_column]
 
@@ -213,7 +213,7 @@ class DfFileCatalog(Catalog):
         Returns
         -------
         entries: dict
-            Dictionary of all available entries (subcatalogs) in the dataframe catalog.
+            Dictionary of all available entries (sources) in the dataframe catalog.
         """
 
         missing = set(self.keys()) - set(self._entries.keys())
@@ -247,42 +247,42 @@ class DfFileCatalog(Catalog):
 
     def add(
         self,
-        cat: intake.DataSource,
+        source: intake.DataSource,
         metadata: dict[str, typing.Any] = None,
         overwrite: bool = False,
     ) -> None:
         """
-        Add an intake (sub)catalog to the dataframe catalog.
+        Add an intake source to the dataframe catalog.
 
         Parameters
         ----------
-        cat: object
-            An intake catalog object with a .yaml() method.
+        source: object
+            An intake source object with a .yaml() method.
         metadata: dict, optional
-            Dictionary of metadata associated with the intake (sub)catalog. If an entry is provided
-            corresponding to the 'name_column', the catalog name will be overwritten with this value.
-            Otherwise the corresponding 'name_column' entry is taken from the intake catalog name if
+            Dictionary of metadata associated with the intake source. If an entry is provided
+            corresponding to the 'name_column', the source name will be overwritten with this value.
+            Otherwise the corresponding 'name_column' entry is taken from the intake source name if
             it exists, failing otherwise.
         overwrite: bool, optional
             If True, overwrite all existing entries in the dataframe catalog with name_column entries
-            that match the name of this cat. Otherwise the entry is appended to the dataframe catalog.
+            that match the name of this source. Otherwise the entry is appended to the dataframe catalog.
         """
 
         metadata = metadata or {}
         metadata_keys = list(metadata.keys())
 
         if self.name_column in metadata:
-            cat.name = metadata[self.name_column]
+            source.name = metadata[self.name_column]
         else:
-            if cat.name:
-                metadata[self.name_column] = cat.name
+            if source.name:
+                metadata[self.name_column] = source.name
             else:
                 raise DfFileCatalogError(
-                    "Cannot add an unnamed catalog to the dataframe catalog. Either set the name attribute "
-                    "on the catalog being add or provide an entry in the input argument 'metadata' "
+                    "Cannot add an unnamed source to the dataframe catalog. Either set the name attribute "
+                    "on the source being add or provide an entry in the input argument 'metadata' "
                     "corresponding to the 'name_column' of the dataframe catalog."
                 )
-        metadata[self.yaml_column] = cat.yaml()
+        metadata[self.yaml_column] = source.yaml()
 
         row = pd.DataFrame({k: 0 for k in metadata.keys()}, index=[0])
         row.iloc[0] = pd.Series(metadata)
@@ -320,12 +320,12 @@ class DfFileCatalog(Catalog):
 
     def remove(self, entry: str) -> None:
         """
-        Remove an intake (sub)catalog from the dataframe catalog.
+        Remove an intake source from the dataframe catalog.
 
         Parameters
         ----------
         entry: str
-            The corresponding 'name_column' entry for the (sub)catalog to remove.
+            The corresponding 'name_column' entry for the source to remove.
         """
 
         if entry in self.df[self.name_column].unique():
@@ -347,11 +347,11 @@ class DfFileCatalog(Catalog):
 
     def search(self, require_all: bool = False, **query: typing.Any) -> "DfFileCatalog":
         """
-        Search for subcatalogs in the dataframe catalog. Multiple columns can be queried simultaneously
-        by passing multiple queries. Only subcatalogs that satisfy all column queries are returned.
+        Search for sources in the dataframe catalog. Multiple columns can be queried simultaneously
+        by passing multiple queries. Only sources that satisfy all column queries are returned.
         Additionally, multiple values within a column can be queried by passing a list of values to
         query on. By default, a column query is considered to match if any of the values are found
-        in the corresponding subcatalog metadata (see the `require_all` argument).
+        in the corresponding source metadata (see the `require_all` argument).
 
         Parameters
         ----------
@@ -359,8 +359,8 @@ class DfFileCatalog(Catalog):
             A dictionary of query parameters to execute against the dataframe catalog of the form
             {column_name: value[s]}.
         require_all : bool, optional
-            If True, returned subcatalogs satisfy all the query criteria. For example, a query of
-            `variable = ["a", "b"]` with `require_all = True` will return only subcatalogs that
+            If True, returned sources satisfy all the query criteria. For example, a query of
+            `variable = ["a", "b"]` with `require_all = True` will return only sources that
             contain _both_ variables "a" and "b".
 
         Returns
@@ -436,61 +436,113 @@ class DfFileCatalog(Catalog):
 
     serialize = save
 
-    def to_subcatalog_dict(
-        self, **kwargs: dict[str, typing.Any]
-    ) -> dict[str, typing.Any]:
+    def to_source_dict(self, **kwargs: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """
-        Load dataframe catalog entries into a dictionary of intake subcatalogs.
+        Load dataframe catalog entries into a dictionary of intake sources.
 
         Parameters
         ----------
         kwargs: dict
-            Arguments/user parameters to use for opening the subcatalog(s). For example, many intake drivers support
+            Arguments/user parameters to use for opening the sources. For example, many intake drivers support
             a `storage_options` argument with parameters to be passed to the backend file-system. Note, this function
-            passes the same kwargs to all subcatalogs in the DF catalog. To pass different kwargs to different
-            subcatalogs, load each subcatalog using it's key (name), e.g. `cat["<subcat_name>"](**kwargs)`.
+            passes the same kwargs to all sources in the dataframe catalog. To pass different kwargs to different
+            sources, load each source using it's key (name), e.g. `cat["<source_name>"](**kwargs)`.
 
         Returns
         -------
-        subcatalogs: dict
-            A dictionary of subcatalogs.
+        sources: dict
+            A dictionary of intake sources.
         """
 
         if not self.keys():
             warnings.warn(
-                "There are no subcatalogs to open. Returning an empty dictionary.",
+                "There are no sources to open. Returning an empty dictionary.",
                 UserWarning,
                 stacklevel=2,
             )
 
-        return {key: subcat(**kwargs) for key, subcat in self.items()}
+        return {key: source(**kwargs) for key, source in self.items()}
 
-    def to_subcatalog(self, **kwargs: dict[str, typing.Any]) -> intake.DataSource:
+    def to_source(self, **kwargs: dict[str, typing.Any]) -> intake.DataSource:
         """
-        Load intake subcatalog. This is only possible if there is only one remaining subcatalog in the dataframe
+        Load intake source. This is only possible if there is only one remaining source in the dataframe
         catalog.
 
         Parameters
         ----------
         kwargs: dict
-            Arguments/user parameters to use for opening the subcatalog. For example, many intake drivers support
+            Arguments/user parameters to use for opening the intake source. For example, many intake drivers support
             a `storage_options` argument with parameters to be passed to the backend file-system.`.
 
         Returns
         -------
-        subcatalog: :py:class:`intake.DataSource`
-            A dictionary of subcatalogs.
+        source: :py:class:`intake.DataSource`
+            A dictionary of sources.
         """
 
         if len(self) == 1:
-            res = self.to_subcatalog_dict(**kwargs)
-            _, subcat = res.popitem()
-            return subcat
+            res = self.to_source_dict(**kwargs)
+            _, source = res.popitem()
+            return source
         else:
             raise ValueError(
-                f"Expected exactly one subcatalog, received {len(self)}. Please refine your search or use "
-                "`.to_subcatalog_dict()`."
+                f"Expected exactly one source, received {len(self)}. Please refine your search or use "
+                "`.to_source_dict()`."
             )
+
+    def to_subcatalog_dict(
+        self, **kwargs: dict[str, typing.Any]
+    ) -> dict[str, typing.Any]:
+        """
+        Load dataframe catalog entries into a dictionary of intake sources. NOTE, THIS METHOD WILL BE DEPRECIATED
+        IN THE NEXT RELEASE, PLEASE USE `to_source_dict` instead.
+
+        Parameters
+        ----------
+        kwargs: dict
+            Arguments/user parameters to use for opening the sources. For example, many intake drivers support
+            a `storage_options` argument with parameters to be passed to the backend file-system. Note, this function
+            passes the same kwargs to all sources in the dataframe catalog. To pass different kwargs to different
+            sources, load each source using it's key (name), e.g. `cat["<source_name>"](**kwargs)`.
+
+        Returns
+        -------
+        sources: dict
+            A dictionary of intake sources.
+        """
+
+        warn(
+            "This method will be depreciated in the next release. Please using `to_source_dict` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        return self.to_source_dict(**kwargs)
+
+    def to_subcatalog(self, **kwargs: dict[str, typing.Any]) -> intake.DataSource:
+        """
+        Load intake source. This is only possible if there is only one remaining source in the dataframe
+        catalog. NOTE, THIS METHOD WILL BE DEPRECIATED IN THE NEXT RELEASE, PLEASE USE `to_source` instead.
+
+        Parameters
+        ----------
+        kwargs: dict
+            Arguments/user parameters to use for opening the intake source. For example, many intake drivers support
+            a `storage_options` argument with parameters to be passed to the backend file-system.`.
+
+        Returns
+        -------
+        source: :py:class:`intake.DataSource`
+            A dictionary of sources.
+        """
+
+        warn(
+            "This method will be depreciated in the next release. Please using `to_source` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        return self.to_source(**kwargs)
 
     @property
     def df(self) -> pd.DataFrame:
