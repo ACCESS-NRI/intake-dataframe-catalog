@@ -3,6 +3,13 @@
 Changelog
 =========
 
+0.1.1.post1
+-----------
+
+Release 15/05/2023
+
+- Post-release due to PyPI failure partway through 0.1.1 release
+
 0.1.1
 -----
 
