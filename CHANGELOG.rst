@@ -3,6 +3,15 @@
 Changelog
 =========
 
+0.0.2
+-----
+
+Release 17/05/2023
+
+- Re-implement the way that matched iterables are concatenated in searches to avoid having 
+  to determine the iterable type from the first element (:issue:`29`, :pull:`30`). By 
+  `Dougie Squire <https://github.com/dougiesquire>`_.
+
 0.1.1.post1
 -----------
 
