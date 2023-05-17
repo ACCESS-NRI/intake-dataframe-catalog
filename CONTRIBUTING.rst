@@ -132,7 +132,7 @@ trigger this process by creating a new tag and corresponding release on GitHub.
 
 #. Go to https://github.com/ACCESS-NRI/intake-dataframe-catalog
 
-#. Click on "Create new release" on the right-hand side of the screen
+#. Click on "Releases/Draft new release" on the right-hand side of the screen
 
 #. Enter the new version (vX.X.X) as the tag and release title. Add a brief description of the release.
 
