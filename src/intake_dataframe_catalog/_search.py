@@ -9,6 +9,7 @@ import typing
 
 import numpy as np
 import pandas as pd
+import tlz
 
 
 def _is_pattern(value: typing.Union[str, typing.Pattern]) -> bool:
@@ -36,8 +37,7 @@ def _match_iterables(
     strings: typing.Union[list, tuple, set], pattern: str, regex: bool
 ):
     """
-    Given an iterable of strings, return all that match the provided pattern
-    as a set.
+    Given an iterable of strings, return all that match the provided pattern.
     """
     matches = []
     for string in strings:
@@ -47,7 +47,7 @@ def _match_iterables(
             match = pattern == string
         if match:
             matches.append(string)
-    return matches
+    return type(strings)(matches)
 
 
 def search(
@@ -102,7 +102,9 @@ def search(
 
             # Keep track of which iterables matched
             if column in matched_iterables.columns:
-                matched_iterables[column] = matched_iterables[column] + matches
+                matched_iterables[column] = matched_iterables[column].combine(
+                    matches, func=lambda s1, s2: type(s1)(tlz.concat([s1, s2]))
+                )
             else:
                 matched_iterables[column] = matches
 
@@ -137,8 +139,7 @@ def search(
 
     # 3. Replace queried columns with iterables with reduced versions
     if not matched_iterables.empty:
-        types = {col: type(df[col].iloc[0]) for col in matched_iterables.columns}
-        df[matched_iterables.columns] = matched_iterables.apply(types)
+        df[matched_iterables.columns] = matched_iterables
 
     if require_all:
         has_all = n_conditions_in_group == len(conditions)
