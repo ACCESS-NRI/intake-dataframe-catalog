@@ -127,10 +127,22 @@ Preparing Pull Requests
 Preparing a new release
 -----------------------
 
-New releases to PyPI are published automatically when a tag is pushed to Github. To publish a new release::
+New releases to PyPI and conda are published automatically when a tag is pushed to Github. The preferred approach is to 
+trigger this process by creating a new tag and corresponding release on GitHub.
 
+#. Go to https://github.com/ACCESS-NRI/intake-dataframe-catalog
+
+#. Click on "Create new release" on the right-hand side of the screen
+
+#. Enter the new version (vX.X.X) as the tag and release title. Add a brief description of the release.
+
+#. Click on "Publish release". This should create the release on GitHub and trigger the workflow that builds and uploads 
+   the new version to PyPI and conda
+
+Alternatively (any discouraged), to trigger a new release from the command line::
+
+    $ git fetch --all --tags
     $ export RELEASE=vX.X.X
-    $ # Create git tags
     $ git commit --allow-empty -m "Release $RELEASE"
     $ git tag -a $RELEASE -m "Version $RELEASE"
     $ git push --tags

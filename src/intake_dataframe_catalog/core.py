@@ -5,7 +5,6 @@ import ast
 import typing
 import warnings
 from io import UnsupportedOperation
-from warnings import warn
 
 import fsspec
 import intake
@@ -489,60 +488,6 @@ class DfFileCatalog(Catalog):
                 f"Expected exactly one source, received {len(self)}. Please refine your search or use "
                 "`.to_source_dict()`."
             )
-
-    def to_subcatalog_dict(
-        self, **kwargs: dict[str, typing.Any]
-    ) -> dict[str, typing.Any]:
-        """
-        Load dataframe catalog entries into a dictionary of intake sources. NOTE, THIS METHOD WILL BE DEPRECIATED
-        IN THE NEXT RELEASE, PLEASE USE `to_source_dict` instead.
-
-        Parameters
-        ----------
-        kwargs: dict
-            Arguments/user parameters to use for opening the sources. For example, many intake drivers support
-            a `storage_options` argument with parameters to be passed to the backend file-system. Note, this function
-            passes the same kwargs to all sources in the dataframe catalog. To pass different kwargs to different
-            sources, load each source using it's key (name), e.g. `cat["<source_name>"](**kwargs)`.
-
-        Returns
-        -------
-        sources: dict
-            A dictionary of intake sources.
-        """
-
-        warn(
-            "This method will be depreciated in the next release. Please using `to_source_dict` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        return self.to_source_dict(**kwargs)
-
-    def to_subcatalog(self, **kwargs: dict[str, typing.Any]) -> intake.DataSource:
-        """
-        Load intake source. This is only possible if there is only one remaining source in the dataframe
-        catalog. NOTE, THIS METHOD WILL BE DEPRECIATED IN THE NEXT RELEASE, PLEASE USE `to_source` instead.
-
-        Parameters
-        ----------
-        kwargs: dict
-            Arguments/user parameters to use for opening the intake source. For example, many intake drivers support
-            a `storage_options` argument with parameters to be passed to the backend file-system.`.
-
-        Returns
-        -------
-        source: :py:class:`intake.DataSource`
-            A dictionary of sources.
-        """
-
-        warn(
-            "This method will be depreciated in the next release. Please using `to_source` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        return self.to_source(**kwargs)
 
     @property
     def df(self) -> pd.DataFrame:
