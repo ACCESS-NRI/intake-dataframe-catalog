@@ -18,7 +18,7 @@ from . import __version__
 from ._search import search
 
 pd.set_option("display.max_colwidth", 200)
-pd.set_option("display.max_rows", 8)
+pd.set_option("display.max_rows", None)
 
 
 class DfFileCatalogError(Exception):
@@ -182,7 +182,7 @@ class DfFileCatalog(Catalog):
         Return an html summary for the dataframe catalog object. Mainly for IPython notebook.
         """
 
-        text = self.df_summary._repr_html_()
+        text = f"<div style='max-height: 300px'>{self.df_summary._repr_html_()}</div>"
 
         return (
             f"<p><strong>{self.name or 'Intake dataframe'} catalog with {len(self)} source(s) across "
