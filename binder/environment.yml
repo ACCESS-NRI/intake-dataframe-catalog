@@ -5,4 +5,3 @@ channels:
 dependencies:
   - intake-dataframe-catalog
   - intake-esm
-  - python=3.11
