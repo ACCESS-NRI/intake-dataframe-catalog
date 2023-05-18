@@ -8,6 +8,8 @@ Changelog
 
 Not yet released
 
+- Add CSV source example to quickstart in docs (:issue:`33`, :pull:`35`). By 
+  `Dougie Squire <https://github.com/dougiesquire>`_.
 - Make dataframe displayed with :code:`_ipython_display_` scrollable (:issue:`33`, :pull:`35`).
   By `Dougie Squire <https://github.com/dougiesquire>`_.
 
