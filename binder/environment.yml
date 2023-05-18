@@ -1,7 +1,0 @@
-name: binder
-channels:
-  - conda-forge
-  - accessnri
-dependencies:
-  - intake-dataframe-catalog
-  - intake-esm
