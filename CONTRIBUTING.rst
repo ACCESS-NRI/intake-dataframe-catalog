@@ -114,9 +114,8 @@ Preparing Pull Requests
 
     $ pytest .
 
-#. Add a new entry describing your contribution to the :ref:`changelog`
-   in :code:`doc/reference/changelog.rst`. Please try to follow the format of the existing
-   entries.
+#. Add a new entry describing your contribution to CHANGELOG.rst. Please try to follow 
+   the format of the existing entries.
 
 #. Submit a pull request through the GitHub `website <https://github.com/ACCESS-NRI/intake-dataframe-catalog/pulls>`__.
 
@@ -132,7 +131,7 @@ trigger this process by creating a new tag and corresponding release on GitHub.
 
 #. Go to https://github.com/ACCESS-NRI/intake-dataframe-catalog
 
-#. Click on "Releases/Draft new release" on the right-hand side of the screen
+#. Click on "Releases"/"Draft new release" on the right-hand side of the screen
 
 #. Enter the new version (vX.X.X) as the tag and release title. Add a brief description of the release.
 
