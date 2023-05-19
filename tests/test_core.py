@@ -711,6 +711,11 @@ def test_pass_query(catalog_path):
         in str(excinfo.value)
     )
 
+    # Check error message when no previous query has been made
+    with pytest.raises(DfFileCatalogError) as excinfo:
+        cat.to_source_dict(pass_query=True)
+    assert "No previous queries exist to pass on to source(s)" in str(excinfo.value)
+
 
 def test_subclassing_catalog(catalog_path):
     """
