@@ -472,32 +472,36 @@ class DfFileCatalog(Catalog):
 
         if pass_query:
             if self._previous_search_query:
+                sources_searched = {}
                 for key, source in sources.items():
-                    try:
-                        source.search(**self._previous_search_query)
-                    except AttributeError:
+                    if not hasattr(source, "search"):
                         raise DfFileCatalogError(
-                            f"The source corresponding to key '{key}' ({source.classname}) does not have a "
-                            "`.search` method and so cannot be loaded with `pass_query = True`."
+                            f"The source '{key}' ({source.classname}) does not have a `.search` method and so cannot "
+                            "be loaded with `pass_query = True`."
                         )
-                    except TypeError:
-                        raise DfFileCatalogError(
-                            f"The source corresponding to key '{key}' ({source.classname}) has a `.search` "
-                            "method with a different API than `self.search` and so cannot be loaded with "
-                            "`pass_query = True`."
-                        )
-                    except Exception:
-                        raise DfFileCatalogError(
-                            f"Unable to load the source corresponding to key '{key}' with `pass_query = True`. This "
-                            "is usually because the query includes keys that are not valid for the source. For example, "
-                            "if the source is an intake-esm datastore, its columns may have different names than those "
-                            "in this dataframe catalog. Please set `pass_query = False`."
-                        )
+                    else:
+                        # Try to pass each query sequentially
+                        for col, val in self._previous_search_query.items():
+                            try:
+                                source = source.search(**{col: val})
+                            except TypeError:
+                                raise DfFileCatalogError(
+                                    f"The source '{key}' ({source.classname}) has a `.search` method with a different "
+                                    "API than `self.search` and so cannot be loaded with `pass_query = True`."
+                                )
+                            except Exception:
+                                # Only warn here so that valid queries can still be applied
+                                warnings.warn(
+                                    f"Unable to pass query on '{col}' on to source '{key}' so this query is being "
+                                    f"skipped. This is usually because '{col}' is not a valid query key in the source. "
+                                    f"For example, if the source is an intake-esm datastore, the column '{col}' may "
+                                    "not exist or may be called something else.",
+                                    UserWarning,
+                                    stacklevel=2,
+                                )
 
-                sources = {
-                    key: source.search(**self._previous_search_query)
-                    for key, source in sources.items()
-                }
+                    sources_searched[key] = source
+                sources = sources_searched
             else:
                 raise DfFileCatalogError(
                     "No previous queries exist to pass on to source(s)"
