@@ -8,9 +8,9 @@ Changelog
 
 Not yet released
 
-- Add :code:`pass_query` flag to `.to_source` and `to_source_dict` methods to enable
-  users to blindly pass the most recent query provided to `self.search` on to the 
-  `.search` method of the source(s) (:issue:`37`, :pull:`38`). By
+- Add :code:`pass_query` flag to :code:`.to_source` and :code:`to_source_dict` methods to enable
+  users to blindly pass the most recent query provided to :code:`self.search` on to the 
+  :code:`.search` method of the source(s) (:issue:`37`, :pull:`38`). By
   `Dougie Squire <https://github.com/dougiesquire>`_.
 - Add the ability to run docs/getting_started/quickstart.ipynb using Binder (:issue:`36`, 
   :pull:`38`). By `Dougie Squire <https://github.com/dougiesquire>`_.
