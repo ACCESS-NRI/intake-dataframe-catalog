@@ -691,25 +691,42 @@ def test_pass_query(catalog_path):
         cat.search(variable="dummy").to_source(pass_query=True)
     assert "has a `.search` method with a different API" in str(excinfo.value)
 
-    # Check error message when columns in query are not valid for source
-    with pytest.raises(DfFileCatalogError) as excinfo:
-        cat.search(variable="prsn").to_source(pass_query=True)
-    assert (
-        "This is usually because the query includes keys that are not valid for the source"
-        in str(excinfo.value)
-    )
+    # Check warning message when columns in query are not valid for source
+    with pytest.warns(
+        UserWarning,
+        match=r"Unable to pass query on 'variable' on to source 'cmip6' so this query is being skipped",
+    ):
+        source = cat.search(variable="prsn").to_source(pass_query=True)
+    assert len(source) == len(cat.cmip6)
 
     # Check that it works when it should
     source = cat.search(variable="hfls").to_source(pass_query=True)
     assert len(source) == 1
 
-    # Check with multiple entries. Should work on cmip5 and throw error on cmip6
-    with pytest.raises(DfFileCatalogError) as excinfo:
-        cat.search(variable="tasmax").to_source_dict(pass_query=True)
-    assert (
-        "Unable to load the source corresponding to key 'cmip6' with `pass_query = True`"
-        in str(excinfo.value)
-    )
+    # Check with multiple queries, one skipped, one not
+    with pytest.warns(
+        UserWarning,
+        match=r"Unable to pass query on 'realm' on to source 'cmip5' so this query is being skipped",
+    ):
+        source = cat.search(realm="atmos", variable="hfls").to_source(pass_query=True)
+    assert len(source) == 1
+
+    # Check with multiple queries, both skipped
+    with pytest.warns(
+        UserWarning,
+        match=r"Unable to pass query on 'realm' on to source 'cmip6' so this query is being skipped",
+    ):
+        source = cat.search(realm="atmos", variable="prsn").to_source(pass_query=True)
+    assert len(source) == len(cat.cmip6)
+
+    # Check with multiple entries. Should work on cmip5 and warn on cmip6
+    with pytest.warns(
+        UserWarning,
+        match=r"Unable to pass query on 'variable' on to source 'cmip6' so this query is being skipped",
+    ):
+        source_dict = cat.search(variable="tasmax").to_source_dict(pass_query=True)
+    assert len(source_dict["cmip5"]) == 1
+    assert len(source_dict["cmip6"]) == len(cat.cmip6)
 
     # Check error message when no previous query has been made
     with pytest.raises(DfFileCatalogError) as excinfo:
