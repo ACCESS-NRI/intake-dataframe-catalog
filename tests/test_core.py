@@ -665,6 +665,53 @@ def test_df_summary_update(catalog_path, source_path):
     assert cat.df_summary.to_dict(orient="split", index=False) == expected_dict
 
 
+def test_pass_query(catalog_path):
+    """
+    Test the pass_query flag on the to_source* methods
+    """
+    cat = intake.open_df_catalog(
+        path=str(catalog_path / "dfcat.csv"),
+        columns_with_iterables=["variable"],
+        mode="a",
+    )
+
+    # Check error message when there is no .search method on source
+    with pytest.raises(DfFileCatalogError) as excinfo:
+        cat.search(variable="tas").to_source(pass_query=True)
+    assert "does not have a `.search` method" in str(excinfo.value)
+
+    # Check error message when search API is different on source
+    # A dummy catalog with a .search method
+    dummy_cat = intake.catalog.base.Catalog(
+        entries={"dummy": None},
+        name="dummy",
+    )
+    cat.add(dummy_cat, {"realm": "dummy", "variable": ["dummy"]})
+    with pytest.raises(DfFileCatalogError) as excinfo:
+        cat.search(variable="dummy").to_source(pass_query=True)
+    assert "has a `.search` method with a different API" in str(excinfo.value)
+
+    # Check error message when columns in query are not valid for source
+    with pytest.raises(DfFileCatalogError) as excinfo:
+        cat.search(variable="prsn").to_source(pass_query=True)
+    assert (
+        "This is usually because the query includes keys that are not valid for the source"
+        in str(excinfo.value)
+    )
+
+    # Check that it works when it should
+    source = cat.search(variable="hfls").to_source(pass_query=True)
+    assert len(source) == 1
+
+    # Check with multiple entries. Should work on cmip5 and throw error on cmip6
+    with pytest.raises(DfFileCatalogError) as excinfo:
+        cat.search(variable="tasmax").to_source_dict(pass_query=True)
+    assert (
+        "Unable to load the source corresponding to key 'cmip6' with `pass_query = True`"
+        in str(excinfo.value)
+    )
+
+
 def test_subclassing_catalog(catalog_path):
     """
     Test subclassing DfFileCatalog

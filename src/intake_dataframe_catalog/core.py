@@ -100,6 +100,7 @@ class DfFileCatalog(Catalog):
         self._entries = {}
         self._df = pd.DataFrame(columns=[self.name_column, self.yaml_column])
         self._df_summary = None
+        self._previous_search_query = None
 
         self._allow_write = False
         self._try_overwrite = False
@@ -394,6 +395,7 @@ class DfFileCatalog(Catalog):
         )
         cat.path = self.path
         cat._df = results
+        cat._previous_search_query = query
 
         return cat
 
@@ -435,12 +437,18 @@ class DfFileCatalog(Catalog):
 
     serialize = save
 
-    def to_source_dict(self, **kwargs: dict[str, typing.Any]) -> dict[str, typing.Any]:
+    def to_source_dict(
+        self, pass_query=False, **kwargs: dict[str, typing.Any]
+    ) -> dict[str, typing.Any]:
         """
         Load dataframe catalog entries into a dictionary of intake sources.
 
         Parameters
         ----------
+        pass_query: boolean, optional
+            If True, blindly pass the most recent query provided to `self.search` on to the `.search` method of the
+            source(s). An exception is thrown if the source does not have a `.search` method, or if a method exists
+            that does not support dictionary queries of the type provided to `self.search`.
         kwargs: dict
             Arguments/user parameters to use for opening the sources. For example, many intake drivers support
             a `storage_options` argument with parameters to be passed to the backend file-system. Note, this function
@@ -460,15 +468,56 @@ class DfFileCatalog(Catalog):
                 stacklevel=2,
             )
 
-        return {key: source(**kwargs) for key, source in self.items()}
+        sources = {key: source(**kwargs) for key, source in self.items()}
 
-    def to_source(self, **kwargs: dict[str, typing.Any]) -> intake.DataSource:
+        if pass_query:
+            if self._previous_search_query:
+                for key, source in sources.items():
+                    try:
+                        source.search(**self._previous_search_query)
+                    except AttributeError:
+                        raise DfFileCatalogError(
+                            f"The source corresponding to key '{key}' ({source.classname}) does not have a "
+                            "`.search` method and so cannot be loaded with `pass_query = True`."
+                        )
+                    except TypeError:
+                        raise DfFileCatalogError(
+                            f"The source corresponding to key '{key}' ({source.classname}) has a `.search` "
+                            "method with a different API than `self.search` and so cannot be loaded with "
+                            "`pass_query = True`."
+                        )
+                    except Exception:
+                        raise DfFileCatalogError(
+                            f"Unable to load the source corresponding to key '{key}' with `pass_query = True`. This "
+                            "is usually because the query includes keys that are not valid for the source. For example, "
+                            "if the source is an intake-esm datastore, its columns may have different names than those "
+                            "in this dataframe catalog. Please set `pass_query = False`."
+                        )
+
+                sources = {
+                    key: source.search(**self._previous_search_query)
+                    for key, source in sources.items()
+                }
+            else:
+                raise DfFileCatalogError(
+                    "No previous queries exist to pass on to source(s)"
+                )
+
+        return sources
+
+    def to_source(
+        self, pass_query=False, **kwargs: dict[str, typing.Any]
+    ) -> intake.DataSource:
         """
         Load intake source. This is only possible if there is only one remaining source in the dataframe
         catalog.
 
         Parameters
         ----------
+        pass_query: boolean, optional
+            If True, blindly pass the most recent query provided to `self.search` on to the `.search` method of the
+            source. An exception is thrown if the source does not have a `.search` method, or if a method exists
+            that does not support dictionary queries of the type provided to `self.search`.
         kwargs: dict
             Arguments/user parameters to use for opening the intake source. For example, many intake drivers support
             a `storage_options` argument with parameters to be passed to the backend file-system.`.
@@ -480,7 +529,7 @@ class DfFileCatalog(Catalog):
         """
 
         if len(self) == 1:
-            res = self.to_source_dict(**kwargs)
+            res = self.to_source_dict(pass_query, **kwargs)
             _, source = res.popitem()
             return source
         else:
