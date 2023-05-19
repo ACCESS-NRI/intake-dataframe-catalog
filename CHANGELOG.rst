@@ -6,8 +6,11 @@ Changelog
 0.2.2
 -----
 
-Released 19/05/2023
+Released 20/05/2023
 
+- :code:`.to_source_dict(pass_query=True)` now passes queries to the source(s) *sequentially* and
+  warns, rather than errors, if a query is not valid on the source (:issue:`40`, :pull:`43`).
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
 - Fix broken scrolling of :code:`_ipython_display_` in some JupyterLabs (:issue:`41`, :pull:`42`). 
   By `Dougie Squire <https://github.com/dougiesquire>`_.
 
