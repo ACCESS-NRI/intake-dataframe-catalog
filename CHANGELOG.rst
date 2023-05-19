@@ -3,6 +3,14 @@
 Changelog
 =========
 
+0.2.2
+-----
+
+Released 19/05/2023
+
+- Fix broken scrolling of :code:`_ipython_display_` in some JupyterLabs (:issue:`41`, :pull:`42`). 
+  By `Dougie Squire <https://github.com/dougiesquire>`_.
+
 0.2.1
 -----
 

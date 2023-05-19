@@ -183,7 +183,7 @@ class DfFileCatalog(Catalog):
         Return an html summary for the dataframe catalog object. Mainly for IPython notebook.
         """
 
-        text = f"<div style='max-height: 300px'>{self.df_summary._repr_html_()}</div>"
+        text = f"<div style='max-height: 300px; overflow: auto; width: fit-content'>{self.df_summary._repr_html_()}</div>"
 
         return (
             f"<p><strong>{self.name or 'Intake dataframe'} catalog with {len(self)} source(s) across "
