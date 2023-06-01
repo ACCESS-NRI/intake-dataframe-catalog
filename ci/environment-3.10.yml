@@ -2,7 +2,6 @@ name: intake-df-cat-test
 channels:
   - conda-forge
 dependencies:
-  - black
   - intake
   - intake-esm
   - pytest
@@ -10,7 +9,6 @@ dependencies:
   - pip
   - pip:
     - build
-    - ruff
     - codecov
     - pre-commit
     - pytest-cov
