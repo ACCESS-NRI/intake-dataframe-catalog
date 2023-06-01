@@ -165,7 +165,7 @@ class DfFileCatalog(Catalog):
                     assert all(y == yaml_text for y in yamls)
 
                 self._entries[key] = LocalCatalogEntry(
-                    name=key, **yaml.safe_load(yaml_text)["sources"][key]
+                    name=key, **yaml.full_load(yaml_text)["sources"][key]
                 ).get()
                 return self._entries[key]
             raise KeyError(
