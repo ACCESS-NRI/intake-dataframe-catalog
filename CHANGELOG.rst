@@ -3,6 +3,15 @@
 Changelog
 =========
 
+0.2.3
+-----
+
+Not yet released
+
+- Use :code:`yaml.full_load` rather than :code:`yaml.safe_load` to load entry yaml descriptions
+  to allow for python-specific tags (:issue:`45`, :pull:`46`). By 
+  `Dougie Squire <https://github.com/dougiesquire>`_.
+
 0.2.2
 -----
 
