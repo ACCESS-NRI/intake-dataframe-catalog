@@ -561,6 +561,24 @@ def test_read_source(catalog_path):
     assert len(x) == len(cat.cmip5)
 
 
+def test_tags_in_yaml(catalog_path, source_path):
+    """
+    Test loading from a yaml description that contains python-specific tags
+    """
+
+    cat = intake.open_df_catalog(
+        path=str(catalog_path / "tmp.csv"),
+        mode="w",
+    )
+
+    gistemp = intake.open_csv(str(source_path / "gistemp.csv"))
+    gistemp.name = "gistemp"
+    gistemp.metadata = {"tuple": (0, 1, 2), "complex": 1 + 1j}
+    cat.add(gistemp, metadata={"foo": "bar"})
+
+    cat["gistemp"]
+
+
 @pytest.mark.parametrize(
     "metadata, expected_dict",
     [
