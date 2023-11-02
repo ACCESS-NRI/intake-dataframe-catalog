@@ -423,7 +423,7 @@ class DfFileCatalog(Catalog):
                 f"{save_path}", storage_options=self.storage_options
             )
             fs = mapper.fs
-            fname = f"{mapper.fs.protocol}://{save_path}"
+            fname = fs.unstrip_protocol(save_path)
 
             csv_kwargs = {"index": False}
             csv_kwargs.update(kwargs.copy() or {})
