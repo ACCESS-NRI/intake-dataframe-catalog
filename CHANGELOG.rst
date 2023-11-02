@@ -3,6 +3,20 @@
 Changelog
 =========
 
+0.2.3
+-----
+
+Released 02/11/2023
+
+- Move PyPI package upload to trusted publishing (:issue:`44`, :pull:`55`). By
+  `Dougie Squire <https://github.com/dougiesquire>`_.
+- Fix failing readthedocs build (:issue:`51`, :pull:`54`). By
+  `Dougie Squire <https://github.com/dougiesquire>`_.
+- Updates for upcoming changes in pandas (:issue:`52`, :pull:`53`). By
+  `Dougie Squire <https://github.com/dougiesquire>`_.
+- Add fix for fsspec>=2023.10.0 (:issue:`49`, :pull:`50`). By
+  `Dougie Squire <https://github.com/dougiesquire>`_.
+
 0.2.2
 -----
 
