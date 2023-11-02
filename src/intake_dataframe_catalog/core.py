@@ -284,7 +284,7 @@ class DfFileCatalog(Catalog):
                 )
         metadata[self.yaml_column] = source.yaml()
 
-        row = pd.DataFrame({k: 0 for k in metadata.keys()}, index=[0])
+        row = pd.DataFrame({k: "" for k in metadata.keys()}, index=[0])
         row.iloc[0] = pd.Series(metadata)
 
         if self._df.empty:
@@ -614,6 +614,6 @@ def _columns_with_iterables(df, sample=False):
 
     _df = df.sample(20, replace=True) if sample else df
 
-    has_iterables = _df.applymap(type).isin([list, tuple, set]).any().to_dict()
+    has_iterables = _df.map(type).isin([list, tuple, set]).any().to_dict()
 
     return [col for col, check in has_iterables.items() if check]
