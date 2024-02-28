@@ -20,7 +20,7 @@ requirements:
     - versioneer
   run:
     - python >=3.9
-    - intake
+    - intake <2.0.0
     - pandas
 
 test:

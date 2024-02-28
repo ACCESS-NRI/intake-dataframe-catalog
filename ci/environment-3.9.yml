@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - black
-  - intake
+  - intake<2.0.0
   - intake-esm
   - pytest
   - python=3.9
