@@ -3,6 +3,14 @@
 Changelog
 =========
 
+0.2.4
+-----
+
+Not yet released
+
+- Pin intake<2.0.0 while it is in alpha phase  (:issue:`62`, :pull:`63`). By
+  `Dougie Squire <https://github.com/dougiesquire>`_.
+
 0.2.3
 -----
 
