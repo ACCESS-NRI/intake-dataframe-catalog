@@ -3,59 +3,18 @@
 
 # Stolen and adapted from https://github.com/intake/intake-esm/blob/main/intake_esm/_search.py
 
-import itertools
-import re
-import typing
+from typing import Any, Union
 
-import numpy as np
 import pandas as pd
-import tlz
-
-
-def _is_pattern(value: typing.Union[str, typing.Pattern]) -> bool:
-    """
-    Check whether the passed value is a pattern
-
-    Parameters
-    ----------
-    value: str or Pattern
-        The value to check
-    """
-    if isinstance(value, typing.Pattern):
-        return True
-    wildcard_chars = {"*", "?", "$", "^"}
-    try:
-        value_ = value
-        for char in wildcard_chars:
-            value_ = value_.replace(rf"\{char}", "")
-        return any(char in value_ for char in wildcard_chars)
-    except (TypeError, AttributeError):
-        return False
-
-
-def _match_iterables(
-    strings: typing.Union[list, tuple, set], pattern: str, regex: bool
-):
-    """
-    Given an iterable of strings, return all that match the provided pattern.
-    """
-    matches = []
-    for string in strings:
-        if regex:
-            match = re.match(pattern, string, flags=0)
-        else:
-            match = pattern == string
-        if match:
-            matches.append(string)
-    return type(strings)(matches)
+import polars as pl
 
 
 def search(
     df: pd.DataFrame,
-    query: dict[str, typing.Any],
-    columns_with_iterables: list,
+    query: dict[str, Any],
+    columns_with_iterables: Union[list[str], set[str]],
     name_column: str,
-    require_all: str = False,
+    require_all: bool = False,
 ) -> pd.DataFrame:
     """
     Search for entries in the catalog.
@@ -70,7 +29,7 @@ def search(
         Columns in the dataframe that have iterables
     name_column: str
         The name column in the dataframe catalog
-    require_all: str or None
+    require_all: bool
         If True, groupby name_column and return only entries that match
         for all elements in each group
     Returns
@@ -79,74 +38,126 @@ def search(
             A new dataframe with the entries satisfying the query criteria.
     """
 
-    df = df.copy()
+    # TODO: Make this also work for regex queries.
+    pl_df: pl.DataFrame = pl.from_pandas(df)
+
+    iterable_dtypes = {
+        colname: type(df[colname].iloc[0]) for colname in columns_with_iterables
+    }
 
     if not query:
-        return df
+        return pl_df.to_pandas()
 
-    # 1. First create a mask for each query
-    searches = [(key, val) for key, vals in query.items() for val in vals]
-    search_matches = {column: {} for column in query.keys()}
+    iterable_query = {
+        colname: col_query
+        for colname, col_query in query.items()
+        if colname in columns_with_iterables
+    }
 
-    matched_iterables = pd.DataFrame()
+    non_iterable_query = {
+        colname: col_query
+        for colname, col_query in query.items()
+        if colname not in columns_with_iterables
+    }
 
-    for (column, value) in searches:
+    columns_without_iterables = list(set(df.columns) - set(columns_with_iterables))
 
-        is_pattern = _is_pattern(value)
-
-        if column in columns_with_iterables:
-            matches = df[column].apply(
-                lambda values: _match_iterables(values, value, is_pattern)
-            )
-            match = matches.astype(bool)
-
-            # Keep track of which iterables matched
-            if column in matched_iterables.columns:
-                matched_iterables[column] = matched_iterables[column].combine(
-                    matches, func=lambda s1, s2: type(s1)(tlz.concat([s1, s2]))
-                )
-            else:
-                matched_iterables[column] = matches
-
-        elif is_pattern:
-            match = df[column].str.contains(value, regex=True, case=True, flags=0)
-        else:
-            match = df[column] == value
-
-        search_matches[column][value] = match
-
-    # 2. Now combine the masks
-    conditions = set(itertools.product(*[tuple(v) for v in query.values()]))
-
-    groups = df[name_column]
-
-    global_match = np.zeros(len(df), dtype=bool)
-    n_conditions_in_group = np.zeros(groups.nunique(), dtype=bool)
-
-    for condition in conditions:
-
-        condition_match = np.ones(len(df), dtype=bool)
-
-        for column, value in zip(query.keys(), condition):
-
-            condition_match = condition_match & search_matches[column][value]
-
-        n_conditions_in_group = n_conditions_in_group + condition_match.groupby(
-            groups
-        ).any().astype(int)
-
-        global_match = global_match | condition_match
-
-    # 3. Replace queried columns with iterables with reduced versions
-    if not matched_iterables.empty:
-        df[matched_iterables.columns] = matched_iterables
+    col_order = pl_df.columns
+    pl_df = pl_df.with_row_index()
 
     if require_all:
-        has_all = n_conditions_in_group == len(conditions)
-        # Expand has_all_mask across all groups
-        has_all = has_all.loc[groups].reset_index(drop=True)
-        global_match = global_match & has_all
-    else:
-        global_match = global_match
+        # Filter for columns in columns_with_iterables
+        if iterable_query:
+            pl_df_iterables = (
+                pl_df.filter(
+                    [
+                        pl.col(colname).list.set_intersection(col_query) == col_query
+                        for colname, col_query in iterable_query.items()
+                    ]
+                )
+                .with_columns(
+                    [
+                        pl.col(colname).list.set_intersection(col_query).alias(colname)
+                        for colname, col_query in iterable_query.items()
+                    ]
+                )
+                .drop(columns_without_iterables)
+            )
+        else:
+            pl_df_iterables = pl_df.drop(columns_without_iterables)
 
-    return df.loc[global_match]
+        # Filter for columns not in columns_with_iterables
+        if non_iterable_query:
+            pl_df_non_iterables = (
+                pl_df.filter(
+                    [
+                        pl.col(colname).is_in(col_query)
+                        for colname, col_query in non_iterable_query.items()
+                    ]
+                )
+                .with_columns(
+                    [
+                        pl.col(colname).alias(colname)
+                        for colname, col_query in non_iterable_query.items()
+                    ]
+                )
+                .drop(columns_with_iterables)
+            )
+        else:
+            pl_df_non_iterables = pl_df.drop(columns_with_iterables)
+
+    if not require_all:
+        # Filter for columns in columns_with_iterables
+        if iterable_query:
+            pl_df_iterables = (
+                pl_df.filter(
+                    [
+                        pl.col(colname).list.set_intersection(col_query).len() > 0
+                        for colname, col_query in iterable_query.items()
+                    ]
+                )
+                .with_columns(
+                    [
+                        pl.col(colname).list.set_intersection(col_query).alias(colname)
+                        for colname, col_query in iterable_query.items()
+                    ]
+                )
+                .drop(columns_without_iterables)
+            )
+        else:
+            pl_df_iterables = pl_df.drop(columns_without_iterables)
+
+        # Filter for columns not in columns_with_iterables
+        if non_iterable_query:
+            pl_df_non_iterables = (
+                pl_df.filter(
+                    [
+                        pl.col(colname).is_in(col_query)
+                        for colname, col_query in non_iterable_query.items()
+                    ]
+                )
+                .with_columns(
+                    [
+                        pl.col(colname).alias(colname)
+                        for colname, col_query in non_iterable_query.items()
+                    ]
+                )
+                .drop(columns_with_iterables)
+            )
+        else:
+            pl_df_non_iterables = pl_df.drop(columns_with_iterables)
+
+    pl_df = (
+        pl_df_iterables.join(pl_df_non_iterables, on="index")
+        .drop("index")
+        .select(col_order)
+    )
+
+    if pl_df.is_empty():
+        return pd.DataFrame()
+
+    df = pl_df.to_pandas()
+    for col, dtype in iterable_dtypes.items():
+        df[col] = df[col].apply(lambda x: dtype(x))
+
+    return df

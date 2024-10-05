@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import ast
-import typing
 import warnings
 from io import UnsupportedOperation
+from typing import Any, Optional, Union
 
 import fsspec
 import intake
@@ -37,14 +37,14 @@ class DfFileCatalog(Catalog):
 
     def __init__(
         self,
-        path: str = None,
+        path: Optional[str] = None,
         yaml_column: str = "yaml",
         name_column: str = "name",
         mode: str = "r",
-        columns_with_iterables: list[str] = None,
-        storage_options: dict[str, typing.Any] = None,
-        read_kwargs: dict[str, typing.Any] = None,
-        **intake_kwargs: dict[str, typing.Any],
+        columns_with_iterables: Union[list[str], None] = None,
+        storage_options: Optional[dict[str, Any]] = None,
+        read_kwargs: Optional[dict[str, Any]] = None,
+        **intake_kwargs: Any,
     ):
         """
         Initialise a DfFileCatalog.
@@ -97,10 +97,10 @@ class DfFileCatalog(Catalog):
                     )
         self._read_kwargs = read_kwargs
 
-        self._entries = {}
+        self._entries: dict = {}
         self._df = pd.DataFrame(columns=[self.name_column, self.yaml_column])
-        self._df_summary = None
-        self._previous_search_query = None
+        self._df_summary: Optional[pd.DataFrame] = None
+        self._previous_search_query: Optional[dict[str, Any]] = None
 
         self._allow_write = False
         self._try_overwrite = False
@@ -183,7 +183,7 @@ class DfFileCatalog(Catalog):
         Return an html summary for the dataframe catalog object. Mainly for IPython notebook.
         """
 
-        text = f"<div style='max-height: 300px; overflow: auto; width: fit-content'>{self.df_summary._repr_html_()}</div>"
+        text = f"<div style='max-height: 300px; overflow: auto; width: fit-content'>{self.df_summary._repr_html_()}</div>"  # type: ignore
 
         return (
             f"<p><strong>{self.name or 'Intake dataframe'} catalog with {len(self)} source(s) across "
@@ -248,7 +248,7 @@ class DfFileCatalog(Catalog):
     def add(
         self,
         source: intake.DataSource,
-        metadata: dict[str, typing.Any] = None,
+        metadata: Optional[dict[str, Any]] = None,
         overwrite: bool = False,
     ) -> None:
         """
@@ -345,7 +345,7 @@ class DfFileCatalog(Catalog):
         # Force recompute df_summary
         self._df_summary = None
 
-    def search(self, require_all: bool = False, **query: typing.Any) -> "DfFileCatalog":
+    def search(self, require_all: bool = False, **query: Any) -> "DfFileCatalog":
         """
         Search for sources in the dataframe catalog. Multiple columns can be queried simultaneously
         by passing multiple queries. Only sources that satisfy all column queries are returned.
@@ -370,7 +370,7 @@ class DfFileCatalog(Catalog):
         """
         columns = self.columns
 
-        for key, value in query.items():
+        for key in query.keys():
             if key not in columns:
                 raise ValueError(f"Column '{key}' not in columns {columns}")
             if not isinstance(query[key], list):
@@ -401,8 +401,8 @@ class DfFileCatalog(Catalog):
 
     def save(
         self,
-        path: str = None,
-        **kwargs: dict[str, typing.Any],
+        path: Optional[str] = None,
+        **kwargs: dict[str, Any],
     ) -> None:
         """
         Save the dataframe catalog to a file.
@@ -425,7 +425,7 @@ class DfFileCatalog(Catalog):
             fs = mapper.fs
             fname = fs.unstrip_protocol(save_path)
 
-            csv_kwargs = {"index": False}
+            csv_kwargs: dict[str, Any] = {"index": False}
             csv_kwargs.update(kwargs.copy() or {})
 
             with fs.open(fname, "wb") as fobj:
@@ -438,8 +438,8 @@ class DfFileCatalog(Catalog):
     serialize = save
 
     def to_source_dict(
-        self, pass_query=False, **kwargs: dict[str, typing.Any]
-    ) -> dict[str, typing.Any]:
+        self, pass_query: bool = False, **kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Load dataframe catalog entries into a dictionary of intake sources.
 
@@ -510,7 +510,7 @@ class DfFileCatalog(Catalog):
         return sources
 
     def to_source(
-        self, pass_query=False, **kwargs: dict[str, typing.Any]
+        self, pass_query: bool = False, **kwargs: dict[str, Any]
     ) -> intake.DataSource:
         """
         Load intake source. This is only possible if there is only one remaining source in the dataframe
@@ -558,7 +558,7 @@ class DfFileCatalog(Catalog):
         return self.df.columns.tolist()
 
     @property
-    def columns_with_iterables(self) -> set[str]:
+    def columns_with_iterables(self) -> list[str]:
         """
         Return a list of the columns in the dataframe catalog that have iterables.
         """
@@ -596,7 +596,7 @@ class DfFileCatalog(Catalog):
         return self._df_summary
 
 
-def _find_unique(series, columns_with_iterables):
+def _find_unique(series: pd.Series, columns_with_iterables: list[str]) -> set[str]:
     """
     Return a set of unique values in a series
     """
@@ -606,7 +606,7 @@ def _find_unique(series, columns_with_iterables):
     return set(values)
 
 
-def _columns_with_iterables(df, sample=False):
+def _columns_with_iterables(df: pd.DataFrame, sample: bool = False) -> list[str]:
     """
     Return a list of the columns in the provided pandas dataframe/series that have iterables.
     Stolen from https://github.com/intake/intake-esm/blob/main/intake_esm/cat.py#L277
