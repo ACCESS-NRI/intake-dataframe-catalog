@@ -16,9 +16,7 @@ from intake.catalog.local import LocalCatalogEntry
 
 from . import __version__
 from ._search import search
-
-pd.set_option("display.max_colwidth", 200)
-pd.set_option("display.max_rows", None)
+from ._display import display_options as _display_opts
 
 
 class DfFileCatalogError(Exception):
@@ -194,10 +192,13 @@ class DfFileCatalog(Catalog):
         """
         Display the dataframe catalog object as a rich object in an IPython session.
         """
-        from IPython.display import HTML, display
+        if _display_opts.is_notebook:
+            from IPython.display import HTML, display
 
-        contents = self._repr_html_()
-        display(HTML(contents))
+            contents = self._repr_html_()
+            display(HTML(contents))
+        else:
+            print(self)
 
     def keys(self) -> list[str]:
         """
