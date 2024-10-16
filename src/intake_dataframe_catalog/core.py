@@ -15,8 +15,8 @@ from intake.catalog import Catalog
 from intake.catalog.local import LocalCatalogEntry
 
 from . import __version__
-from ._search import search
 from ._display import display_options as _display_opts
+from ._search import search
 
 
 class DfFileCatalogError(Exception):
