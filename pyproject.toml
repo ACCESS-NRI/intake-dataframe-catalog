@@ -14,10 +14,17 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "intake < 2.0.0",
+    "intake >= 0.7.0",
     "pandas",
 ]
 dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "tox",
+]
 
 [project.entry-points."intake.drivers"]
 df_catalog = "intake_dataframe_catalog.core:DfFileCatalog"
