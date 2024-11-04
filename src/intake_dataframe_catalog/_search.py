@@ -38,9 +38,7 @@ def search(
             A new dataframe with the entries satisfying the query criteria.
     """
 
-    # TODO: Make this also work for regex queries.
     pl_df: pl.DataFrame = pl.from_pandas(df)
-    init_df = pl_df
     col_order = pl_df.columns
 
     if not query:
@@ -54,38 +52,37 @@ def search(
     for column in columns_with_iterables:
         pl_df = pl_df.explode(column)
 
+    pl_df = pl_df.with_row_index(name="subindex")
+
     for colname, subquery in query.items():
-        pl_df = pl_df.filter(pl.col(colname).is_in(subquery))
-        """
-        f1_df = pl_df.filter(pl.col(colname).is_in(subquery))
-        f2_df = pl_df.filter([pl.col(colname).str.contains(subq) for subq in subquery])
-        pl_df = pl.concat([f1_df, f2_df])
-        # Sort by index to maintain order
-        pl_df = pl_df.sort(by="index", maintain_order=True)
-        """
+        try:
+            pattern = "|".join(subquery)
+            pl_df = pl_df.filter(pl.col(colname).str.contains(pattern))
+        except TypeError:
+            pl_df = pl_df.filter(pl.col(colname).is_in(subquery))
 
     pl_df = pl_df.group_by("index").agg(
         [
             pl.col(col).implode().flatten().unique(maintain_order=True)
-            for col in col_order
+            for col in [*col_order, "subindex"]
         ]
     )
 
     pl_df = pl_df.drop("index").select(col_order)
 
-    # Now we 'de-iterable' the non-iterable columns.
-    non_iter_cols = [col for col in pl_df.columns if col not in columns_with_iterables]
-    pl_df = pl_df.explode(non_iter_cols)
-
     if require_all:
         # Drop rows where list.len() >= query.len()
         pl_df = pl_df.filter(
             [
-                pl.col(colname).list.len() == len(query[colname])
+                pl.col(colname).list.len() >= len(query[colname])
                 for colname in columns_with_iterables
                 if colname in query
             ]
         )
+
+    # Now we 'de-iterable' the non-iterable columns.
+    non_iter_cols = [col for col in pl_df.columns if col not in columns_with_iterables]
+    pl_df = pl_df.explode(non_iter_cols)
 
     if pl_df.is_empty():
         return pd.DataFrame()
