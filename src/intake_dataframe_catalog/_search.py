@@ -40,6 +40,7 @@ def search(
 
     # TODO: Make this also work for regex queries.
     pl_df: pl.DataFrame = pl.from_pandas(df)
+    init_df = pl_df
     col_order = pl_df.columns
 
     if not query:
@@ -49,149 +50,42 @@ def search(
         colname: type(df[colname].iloc[0]) for colname in columns_with_iterables
     }
 
-    query = _or_iterable(query)
+    pl_df = pl_df.with_row_index()
+    for column in columns_with_iterables:
+        pl_df = pl_df.explode(column)
 
-    iterable_query = {
-        colname: col_query
-        for colname, col_query in query.items()
-        if colname in columns_with_iterables
-    }
+    for colname, subquery in query.items():
+        pl_df = pl_df.filter(pl.col(colname).is_in(subquery))
+        """
+        f1_df = pl_df.filter(pl.col(colname).is_in(subquery))
+        f2_df = pl_df.filter([pl.col(colname).str.contains(subq) for subq in subquery])
+        pl_df = pl.concat([f1_df, f2_df])
+        # Sort by index to maintain order
+        pl_df = pl_df.sort(by="index", maintain_order=True)
+        """
 
-    iter_list_query = {
-        colname: col_query
-        for colname, col_query in iterable_query.items()
-        if isinstance(col_query, list)
-    }
-
-    iter_str_query = {
-        colname: col_query
-        for colname, col_query in iterable_query.items()
-        if isinstance(col_query, str)
-    }
-
-    non_iterable_query = {
-        colname: col_query
-        for colname, col_query in query.items()
-        if colname not in columns_with_iterables
-    }
-
-    non_iter_list_query = {
-        colname: col_query
-        for colname, col_query in non_iterable_query.items()
-        if isinstance(col_query, list)
-    }
-
-    non_iter_str_query = {
-        colname: col_query
-        for colname, col_query in non_iterable_query.items()
-        if isinstance(col_query, str)
-    }
-
-    columns_without_iterables = list(set(df.columns) - set(columns_with_iterables))
-
-    pl_df_iterables = pl_df.with_row_index().drop(columns_without_iterables)
-    pl_df_non_iterables = pl_df.with_row_index().drop(columns_with_iterables)
-
-    if iter_list_query and require_all:
-        # Filter for columns in columns_with_iterables
-        pl_df_iterables = pl_df_iterables.filter(
-            [
-                pl.col(colname).list.set_intersection(col_query) == col_query
-                for colname, col_query in iter_list_query.items()
-            ]
-        ).with_columns(
-            [
-                pl.col(colname).list.set_intersection(col_query).alias(colname)
-                for colname, col_query in iter_list_query.items()
-            ]
-        )
-    elif iter_list_query:
-        # Filter for columns in columns_with_iterables
-        pl_df_iterables = pl_df_iterables.filter(
-            [
-                pl.col(colname).list.set_intersection(col_query).len() > 0
-                for colname, col_query in iter_list_query.items()
-            ]
-        ).with_columns(
-            [
-                pl.col(colname).list.set_intersection(col_query).alias(colname)
-                for colname, col_query in iter_list_query.items()
-            ]
-        )
-
-    # Filter for columns not in columns_with_iterables. Implication here is that
-    # require_all only affects the columns in columns_with_iterables - can we
-    # double check that's correct?
-    if non_iter_list_query:
-        pl_df_non_iterables = pl_df_non_iterables.filter(
-            [
-                pl.col(colname).is_in(col_query)
-                for colname, col_query in non_iter_list_query.items()
-            ]
-        ).with_columns(
-            [
-                pl.col(colname).alias(colname)
-                for colname, col_query in non_iter_list_query.items()
-            ]
-        )
-
-    if iter_str_query and require_all:
-        # If we require all, no messing with the contained list elements to filter
-        # missing searches is required.
-        pl_df_iterables = pl_df_iterables.filter(
-            [
-                pl.col(colname)
-                .list.eval(pl.element().str.contains(col_query).all())
-                .list.first()
-                for colname, col_query in iter_str_query.items()
-            ]
-        )
-    elif iter_str_query:
-        pl_df_iterables = (
-            pl_df_iterables.filter(
-                [
-                    pl.col(colname)
-                    .list.eval(pl.element().str.contains(col_query).any())
-                    .list.first()
-                    for colname, col_query in iter_str_query.items()
-                ]
-            )
-            .with_columns(
-                # We need to subset list columns to only get the elements that match the query
-                [
-                    pl.col(colname)
-                    .list.eval(
-                        pl.when(pl.element().str.contains(col_query))
-                        .then(pl.element())
-                        .otherwise(pl.lit(None))
-                    )
-                    .list.drop_nulls()
-                    for colname, col_query in iter_str_query.items()
-                ]
-            )
-            .with_columns(
-                # Sort, but only if the column is a list when we first read it in
-                [
-                    pl.col(colname).list.sort().alias(colname)
-                    for colname in iter_str_query
-                    if isinstance(df.loc[0, colname], list)
-                ]
-            )
-        )
-
-    if non_iter_str_query:
-        pl_df_non_iterables = pl_df_non_iterables.filter(
-            [
-                pl.col(colname).str.contains(col_query)
-                for colname, col_query in non_iter_str_query.items()
-            ]
-        )
-
-    pl_df = (
-        pl_df_iterables.join(pl_df_non_iterables, on="index")
-        .drop("index")
-        .select(col_order)
+    pl_df = pl_df.group_by("index").agg(
+        [
+            pl.col(col).implode().flatten().unique(maintain_order=True)
+            for col in col_order
+        ]
     )
+
+    pl_df = pl_df.drop("index").select(col_order)
+
+    # Now we 'de-iterable' the non-iterable columns.
+    non_iter_cols = [col for col in pl_df.columns if col not in columns_with_iterables]
+    pl_df = pl_df.explode(non_iter_cols)
+
+    if require_all:
+        # Drop rows where list.len() >= query.len()
+        pl_df = pl_df.filter(
+            [
+                pl.col(colname).list.len() == len(query[colname])
+                for colname in columns_with_iterables
+                if colname in query
+            ]
+        )
 
     if pl_df.is_empty():
         return pd.DataFrame()
