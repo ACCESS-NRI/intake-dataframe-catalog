@@ -90,18 +90,3 @@ def search(
         df[col] = df[col].apply(lambda x: dtype(x))
 
     return df
-
-
-def _or_iterable(query: dict[str, Any]) -> dict[str, Any]:
-    """
-    Change all values which are lists of strings to strings using an '|'.join.
-    This should hopefully make searching for regex terms easier.
-    """
-    new_query = {}
-    for key, value in query.items():
-        if isinstance(value, list) and all(isinstance(x, str) for x in value):
-            new_query[key] = "|".join(value)
-        else:
-            new_query[key] = value
-
-    return new_query
