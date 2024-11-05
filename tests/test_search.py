@@ -1,7 +1,6 @@
 # Copyright 2023 ACCESS-NRI and contributors. See the top-level COPYRIGHT file for details.
 # SPDX-License-Identifier: Apache-2.0
 
-import re
 
 import pandas as pd
 import pytest
@@ -114,7 +113,7 @@ from intake_dataframe_catalog._search import search
             ],
         ),
         (
-            {"B": [re.compile(r"^a$")], "C": [0, 3]},
+            {"B": ["^a$"], "C": [0, 3]},
             [
                 {
                     "A": "aaa",
@@ -154,7 +153,7 @@ from intake_dataframe_catalog._search import search
             ],
         ),
         (
-            {"A": [re.compile("^a.*a$", flags=re.IGNORECASE)]},
+            {"A": ["(?i)^a.*a$"]},
             [
                 {
                     "A": "aaa",

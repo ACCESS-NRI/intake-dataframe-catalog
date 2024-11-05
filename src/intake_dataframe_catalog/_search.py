@@ -53,10 +53,10 @@ def search(
         pl_df = pl_df.explode(column)
 
     for colname, subquery in query.items():
-        try:
+        if pl_df.get_column(colname).dtype == pl.Utf8:
             pattern = "|".join(subquery)
             pl_df = pl_df.filter(pl.col(colname).str.contains(pattern))
-        except TypeError:
+        else:
             pl_df = pl_df.filter(pl.col(colname).is_in(subquery))
 
     pl_df = pl_df.group_by("index").agg(
