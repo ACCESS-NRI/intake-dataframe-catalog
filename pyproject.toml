@@ -16,6 +16,7 @@ classifiers = [
 dependencies = [
     "intake < 2.0.0",
     "pandas",
+    "polars>=1.12"
 ]
 dynamic = ["version"]
 
