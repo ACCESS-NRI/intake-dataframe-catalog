@@ -52,8 +52,6 @@ def search(
     for column in columns_with_iterables:
         pl_df = pl_df.explode(column)
 
-    pl_df = pl_df.with_row_index(name="subindex")
-
     for colname, subquery in query.items():
         try:
             pattern = "|".join(subquery)
@@ -64,7 +62,7 @@ def search(
     pl_df = pl_df.group_by("index").agg(
         [
             pl.col(col).implode().flatten().unique(maintain_order=True)
-            for col in [*col_order, "subindex"]
+            for col in col_order
         ]
     )
 

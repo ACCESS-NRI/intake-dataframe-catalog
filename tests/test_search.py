@@ -333,7 +333,7 @@ def test_search(query, expected):
                 },
                 {
                     "A": "cat1",
-                    "B": ["a", "c"],
+                    "B": ["c", "a"],
                     "C": ("cz", "cy"),
                     "D": {0, 1},
                     "E": "yyy",
@@ -353,7 +353,7 @@ def test_search(query, expected):
                 },
                 {
                     "A": "cat1",
-                    "B": ["a", "c"],
+                    "B": ["c", "a"],
                     "C": ("cz", "cy"),
                     "D": {0, 1},
                     "E": "yyy",
