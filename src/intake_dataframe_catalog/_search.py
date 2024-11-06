@@ -3,10 +3,35 @@
 
 # Stolen and adapted from https://github.com/intake/intake-esm/blob/main/intake_esm/_search.py
 
+from collections.abc import Collection
+from re import Pattern
 from typing import Any, Union
 
 import pandas as pd
 import polars as pl
+
+
+def _is_pattern(input: str) -> bool:
+    """
+    Check whether the passed value is a pattern
+
+    Parameters
+    ----------
+    value: str or Pattern
+        The value to check
+    """
+    if isinstance(input, Pattern):
+        return True  # Obviously, it's a pattern
+    if isinstance(input, Collection) and not isinstance(input, str):
+        return any(_is_pattern(item) for item in input)  # Recurse into the collection
+    wildcard_chars = {"*", "?", "$", "^"}
+    try:
+        value_ = input
+        for char in wildcard_chars:
+            value_ = value_.replace(rf"\{char}", "")
+        return any(char in value_ for char in wildcard_chars)
+    except (TypeError, AttributeError):
+        return False
 
 
 def search(
@@ -47,13 +72,14 @@ def search(
     iterable_dtypes = {
         colname: type(df[colname].iloc[0]) for colname in columns_with_iterables
     }
+    iterable_qcols = [colname for colname in columns_with_iterables if colname in query]
 
     pl_df = pl_df.with_row_index()
     for column in columns_with_iterables:
         pl_df = pl_df.explode(column)
 
     for colname, subquery in query.items():
-        if pl_df.get_column(colname).dtype == pl.Utf8:
+        if pl_df.get_column(colname).dtype == pl.Utf8 and _is_pattern(subquery):
             pattern = "|".join(subquery)
             pl_df = pl_df.filter(pl.col(colname).str.contains(pattern))
         else:
@@ -68,22 +94,18 @@ def search(
 
     pl_df = pl_df.drop("index").select(col_order)
 
-    if require_all:
+    if require_all and iterable_qcols and not pl_df.is_empty():
         # Drop rows where list.len() >= query.len()
         pl_df = pl_df.filter(
             [
                 pl.col(colname).list.len() >= len(query[colname])
-                for colname in columns_with_iterables
-                if colname in query
+                for colname in iterable_qcols
             ]
         )
 
     # Now we 'de-iterable' the non-iterable columns.
     non_iter_cols = [col for col in pl_df.columns if col not in columns_with_iterables]
     pl_df = pl_df.explode(non_iter_cols)
-
-    if pl_df.is_empty():
-        return pd.DataFrame()
 
     df = pl_df.to_pandas()
     for col, dtype in iterable_dtypes.items():

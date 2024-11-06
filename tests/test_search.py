@@ -2,10 +2,34 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import re
+
 import pandas as pd
 import pytest
 
-from intake_dataframe_catalog._search import search
+from intake_dataframe_catalog._search import _is_pattern, search
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (2, False),
+        ("foo", False),
+        ("foo\\**bar", True),
+        ("foo\\?*bar", True),
+        ("foo\\?\\*bar", False),
+        ("foo\\*bar", False),
+        (r"foo\*bar*", True),
+        ("^foo", True),
+        ("^foo.*bar$", True),
+        (re.compile("hist.*", flags=re.IGNORECASE), True),
+    ],
+)
+def test_is_pattern(value, expected):
+    """
+    Test is_pattern function
+    """
+    assert _is_pattern(value) == expected
 
 
 @pytest.mark.parametrize(
