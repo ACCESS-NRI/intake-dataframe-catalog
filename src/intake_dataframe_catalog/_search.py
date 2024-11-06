@@ -11,7 +11,7 @@ import pandas as pd
 import polars as pl
 
 
-def _is_pattern(input: str) -> bool:
+def _is_pattern(input: str | Pattern | Collection) -> bool:
     """
     Check whether the passed value is a pattern
 
