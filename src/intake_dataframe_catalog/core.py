@@ -4,7 +4,7 @@
 import ast
 import warnings
 from io import UnsupportedOperation
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import fsspec
 import intake
@@ -41,7 +41,7 @@ class DfFileCatalog(Catalog):
         yaml_column: str = "yaml",
         name_column: str = "name",
         mode: str = "r",
-        columns_with_iterables: Union[list[str], None] = None,
+        columns_with_iterables: Optional[list[str]] = None,
         storage_options: Optional[dict[str, Any]] = None,
         read_kwargs: Optional[dict[str, Any]] = None,
         **intake_kwargs: Any,
