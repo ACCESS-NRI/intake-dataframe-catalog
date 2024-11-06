@@ -63,40 +63,41 @@ def search(
             A new dataframe with the entries satisfying the query criteria.
     """
 
-    pl_df: pl.DataFrame = pl.from_pandas(df)
-    col_order = pl_df.columns
-
     if not query:
-        return pl_df.to_pandas()
+        return df
 
+    lf: pl.LazyFrame = pl.from_pandas(df).lazy()
+    col_order = lf.columns
+
+    # Keep the iterable columns and their dtypes hanging around for later
     iterable_dtypes = {
         colname: type(df[colname].iloc[0]) for colname in columns_with_iterables
     }
     iterable_qcols = [colname for colname in columns_with_iterables if colname in query]
 
-    pl_df = pl_df.with_row_index()
+    lf = lf.with_row_index()
     for column in columns_with_iterables:
-        pl_df = pl_df.explode(column)
+        lf = lf.explode(column)
 
     for colname, subquery in query.items():
-        if pl_df.get_column(colname).dtype == pl.Utf8 and _is_pattern(subquery):
+        if lf.schema[colname] == pl.Utf8 and _is_pattern(subquery):
             pattern = "|".join(subquery)
-            pl_df = pl_df.filter(pl.col(colname).str.contains(pattern))
+            lf = lf.filter(pl.col(colname).str.contains(pattern))
         else:
-            pl_df = pl_df.filter(pl.col(colname).is_in(subquery))
+            lf = lf.filter(pl.col(colname).is_in(subquery))
 
-    pl_df = pl_df.group_by("index").agg(
+    lf = lf.group_by("index").agg(
         [
             pl.col(col).implode().flatten().unique(maintain_order=True)
             for col in col_order
         ]
     )
 
-    pl_df = pl_df.drop("index").select(col_order)
+    lf = lf.drop("index").select(col_order)
 
-    if require_all and iterable_qcols and not pl_df.is_empty():
+    if require_all and iterable_qcols and not lf.collect().is_empty():
         # Drop rows where list.len() >= query.len()
-        pl_df = pl_df.filter(
+        lf = lf.filter(
             [
                 pl.col(colname).list.len() >= len(query[colname])
                 for colname in iterable_qcols
@@ -104,10 +105,10 @@ def search(
         )
 
     # Now we 'de-iterable' the non-iterable columns.
-    non_iter_cols = [col for col in pl_df.columns if col not in columns_with_iterables]
-    pl_df = pl_df.explode(non_iter_cols)
+    non_iter_cols = [col for col in lf.columns if col not in columns_with_iterables]
+    lf = lf.explode(non_iter_cols)
 
-    df = pl_df.to_pandas()
+    df = lf.collect().to_pandas()
     for col, dtype in iterable_dtypes.items():
         df[col] = df[col].apply(lambda x: dtype(x))
 
