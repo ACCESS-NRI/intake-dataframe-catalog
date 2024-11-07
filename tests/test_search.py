@@ -259,6 +259,7 @@ def test_search(query, expected):
             [
                 {"A": "cat0", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0}, "E": "xxx"},
                 {"A": "cat1", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}, "E": "xxx"},
+                {"A": "cat1", "B": ["a"], "C": ("cz", "cy"), "D": {0}, "E": "yyy"},
             ],
         ),
         (

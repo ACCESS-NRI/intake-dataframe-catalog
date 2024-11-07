@@ -94,18 +94,29 @@ def search(
     )
 
     lf = lf.drop("index").select(col_order)
+    lf = lf.explode(name_column)
 
     if require_all and iterable_qcols and not lf.collect().is_empty():
-        # Drop rows where list.len() >= query.len()
-        lf = lf.filter(
-            [
-                pl.col(colname).list.len() >= len(query[colname])
-                for colname in iterable_qcols
-            ]
+        # Find rows where list.len() >= query.len(), and get all the names in those rows
+        nl = (
+            lf.filter(
+                [
+                    pl.col(colname).list.len() >= len(query[colname])
+                    for colname in iterable_qcols
+                ]
+            )
+            .select(name_column)
+            .collect()
+            .to_series()
         )
+        lf = lf.filter(pl.col(name_column).is_in(nl))
 
     # Now we 'de-iterable' the non-iterable columns.
-    non_iter_cols = [col for col in lf.columns if col not in columns_with_iterables]
+    non_iter_cols = [
+        col
+        for col in lf.collect_schema().names()
+        if col not in [*columns_with_iterables, name_column]
+    ]
     lf = lf.explode(non_iter_cols)
 
     df = lf.collect().to_pandas()
