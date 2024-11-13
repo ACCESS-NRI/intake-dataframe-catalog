@@ -122,17 +122,17 @@ def search(
             # Group by name_column and aggregate the other columns into lists
             # first in this instance. Essentially the opposite of the previous
             # group_by("index") operation.
-            nl_lf = lf.group_by(name_column).agg(
+            namelist_lf = lf.group_by(name_column).agg(
                 [
                     pl.col(col).explode().flatten().unique(maintain_order=True)
                     for col in (set(all_cols) - {name_column})
                 ]
             )
         else:
-            nl_lf = lf
+            namelist_lf = lf
 
-        nl = (
-            nl_lf.filter(
+        namelist = (
+            namelist_lf.filter(
                 [
                     pl.col(colname).list.len() >= len(query[colname])
                     for colname in iterable_qcols
@@ -142,7 +142,7 @@ def search(
             .collect()
             .to_series()
         )
-        lf = lf.filter(pl.col(name_column).is_in(nl))
+        lf = lf.filter(pl.col(name_column).is_in(namelist))
 
     df = lf.explode(list(cols_to_deiter)).collect().to_pandas()
 
