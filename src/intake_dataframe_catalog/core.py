@@ -266,6 +266,11 @@ class DfFileCatalog(Catalog):
         overwrite: bool, optional
             If True, overwrite all existing entries in the dataframe catalog with name_column entries
             that match the name of this source. Otherwise the entry is appended to the dataframe catalog.
+
+        Raises
+        ------
+        DfFileCatalogError
+            If the source cannot be added to the dataframe catalog.
         """
 
         metadata = metadata or {}
@@ -293,11 +298,27 @@ class DfFileCatalog(Catalog):
             # Check that new entries contain iterables when they should
             entry_iterable_columns = _columns_with_iterables(row)
             if entry_iterable_columns != self.columns_with_iterables:
-                raise DfFileCatalogError(
-                    f"Cannot add entry with iterable metadata columns: {entry_iterable_columns} "
-                    f"to dataframe catalog with iterable metadata columns: {self.columns_with_iterables}. "
-                    " Please ensure that metadata entries are consistent."
+                missing_iterable_cols = set(self.columns_with_iterables) - set(
+                    entry_iterable_columns
                 )
+                unexpected_iterable_cols = set(entry_iterable_columns) - set(
+                    self.columns_with_iterables
+                )
+
+                if missing_iterable_cols:
+                    err_msg = (
+                        f"Expected iterable metadata columns: {list(self.columns_with_iterables)}. "
+                        f"Unable to add entry with iterable metadata columns '{list(entry_iterable_columns)}' to dataframe catalog: "
+                        f"columns {list(missing_iterable_cols)} must be iterable to ensure metadata entries are consistent."
+                    )
+                elif unexpected_iterable_cols:
+                    err_msg = (
+                        f"Expected iterable metadata columns: {list(self.columns_with_iterables)}. "
+                        f"Unable to add entry with metadata columns '{list(entry_iterable_columns)}' to dataframe catalog: "
+                        f"columns {list(unexpected_iterable_cols)} must not be iterable to ensure metadata entries are consistent."
+                    )
+
+                raise DfFileCatalogError(err_msg)
 
             if set(self.columns) == set(row.columns):
                 if (
