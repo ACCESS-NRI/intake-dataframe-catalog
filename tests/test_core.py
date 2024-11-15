@@ -331,7 +331,17 @@ def test_catalog_add(catalog_path, source_path):
 
     with pytest.raises(DfFileCatalogError) as excinfo:
         cat.add(gistemp, metadata={"realm": "atmos", "variable": "tas"})
-    assert "Cannot add entry with iterable metadata columns" in str(excinfo.value)
+    assert (
+        str(excinfo.value)
+        == "Expected iterable metadata columns: ['variable']. Unable to add entry with iterable metadata columns '[]' to dataframe catalog: columns ['variable'] must be iterable to ensure metadata entries are consistent."
+    )
+
+    with pytest.raises(DfFileCatalogError) as excinfo:
+        cat.add(gistemp, metadata={"realm": ["atmos"], "variable": ["tas"]})
+    assert (
+        str(excinfo.value)
+        == "Expected iterable metadata columns: ['variable']. Unable to add entry with metadata columns '['realm', 'variable']' to dataframe catalog: columns ['realm'] must not be iterable to ensure metadata entries are consistent."
+    )
 
     with pytest.raises(DfFileCatalogError) as excinfo:
         cat.add(gistemp, metadata={"foo": "bar", "variable": ["tas"]})
