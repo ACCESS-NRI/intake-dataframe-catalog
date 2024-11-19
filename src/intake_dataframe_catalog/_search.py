@@ -99,7 +99,7 @@ def search(
         lf = lf.explode(column)
 
     for colname, subquery in query.items():
-        if lf.schema[colname] == pl.Utf8 and _is_pattern(subquery):
+        if lf.collect_schema()[colname] == pl.Utf8 and _is_pattern(subquery):
             pattern = "|".join(subquery)
             lf = lf.filter(pl.col(colname).str.contains(pattern))
         else:
