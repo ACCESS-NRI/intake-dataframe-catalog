@@ -69,7 +69,7 @@ def search(
         return df.head(0)
 
     lf: pl.LazyFrame = pl.from_pandas(df).lazy()
-    all_cols = lf.columns
+    all_cols = lf.collect_schema().names()
 
     # Keep the iterable columns and their dtypes hanging around for later
     iterable_dtypes = {
