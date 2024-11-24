@@ -1,13 +1,12 @@
 # Copyright 2023 ACCESS-NRI and contributors. See the top-level COPYRIGHT file for details.
 # SPDX-License-Identifier: Apache-2.0
 
-import os
-from distutils import dir_util
+import shutil
 from pathlib import Path
 
 from pytest import fixture
 
-here = os.path.abspath(os.path.dirname(__file__))
+here = Path(__file__).parent
 
 
 @fixture(scope="session")
@@ -17,12 +16,12 @@ def catalog_path(tmp_path_factory):
     """
 
     tmp_path = tmp_path_factory.mktemp("data")
-    cat_path = os.path.join(here, "data/catalogs")
-    dir_util.copy_tree(cat_path, str(tmp_path))
+    cat_path = here / Path("data/catalogs")
+    shutil.copy_tree(cat_path, str(tmp_path))
 
     return tmp_path
 
 
 @fixture
 def source_path():
-    return Path(os.path.join(here, "data/source"))
+    return here / Path("data/source")
