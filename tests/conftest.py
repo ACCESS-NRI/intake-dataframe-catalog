@@ -17,7 +17,7 @@ def catalog_path(tmp_path_factory):
 
     tmp_path = tmp_path_factory.mktemp("data")
     cat_path = here / Path("data/catalogs")
-    shutil.copy_tree(cat_path, str(tmp_path))
+    shutil.copytree(cat_path, str(tmp_path))
 
     return tmp_path
 
