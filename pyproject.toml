@@ -5,7 +5,7 @@ authors = [
 ]
 description = "An intake driver for a searchable table of intake sources and associated metadata"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 classifiers = [
     "Development Status :: 4 - Beta",
