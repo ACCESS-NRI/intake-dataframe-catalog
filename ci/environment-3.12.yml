@@ -6,7 +6,7 @@ dependencies:
   - intake>=0.7
   - intake-esm
   - pytest
-  - python=3.9
+  - python=3.12
   - pip
   - pip:
     - build
