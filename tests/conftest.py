@@ -15,15 +15,10 @@ def catalog_path(tmp_path_factory):
     Fixture for moving the contents of test/data to a temporary directory
     """
 
-    tmp_path = tmp_path_factory.mktemp("data")
+    tmp_path = tmp_path_factory.mktemp("data/")
     cat_path = here / Path("data/catalogs")
-    # The following is a dodgy hack that seems to be related to pytest keeping
-    # the temporary directory around after the test has completed. This needs to
-    # be investigated further.
-    try:
-        shutil.copytree(cat_path, str(tmp_path))
-    except FileExistsError:
-        pass
+
+    shutil.copytree(cat_path, str(tmp_path), dirs_exist_ok=True)
 
     return tmp_path
 
