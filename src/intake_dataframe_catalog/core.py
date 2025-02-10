@@ -32,7 +32,6 @@ def _posixpath_constructor(
     return PosixPath(*value)
 
 
-# Add the constructor to SafeLoader
 yaml.SafeLoader.add_constructor(
     "tag:yaml.org,2002:python/object/apply:pathlib.PosixPath", _posixpath_constructor
 )
