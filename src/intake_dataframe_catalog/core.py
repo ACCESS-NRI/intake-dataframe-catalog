@@ -20,18 +20,22 @@ from ._display import display_options as _display_opts
 from ._search import search
 
 
-def _posixpath_constructor(loader : yaml.Loader, node : yaml.nodes.SequenceNode) -> PosixPath:
+def _posixpath_constructor(
+    loader: yaml.Loader, node: yaml.nodes.SequenceNode
+) -> PosixPath:
     """
     Allows us to represent a path within a yaml file as a path object, not just a string.
-    Necessitated by changes to access-nri-intake-catalog passing around path objects, not 
+    Necessitated by changes to access-nri-intake-catalog passing around path objects, not
     raw strings representing these paths.
     """
     value = loader.construct_sequence(node, deep=True)
     return PosixPath(*value)
 
-# Add the constructor to SafeLoader
-yaml.SafeLoader.add_constructor('tag:yaml.org,2002:python/object/apply:pathlib.PosixPath', _posixpath_constructor)
 
+# Add the constructor to SafeLoader
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/object/apply:pathlib.PosixPath", _posixpath_constructor
+)
 
 
 class DfFileCatalogError(Exception):
