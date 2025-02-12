@@ -5,6 +5,7 @@ import ast
 import typing
 import warnings
 from io import UnsupportedOperation
+from pathlib import PosixPath
 
 import fsspec
 import intake
@@ -17,6 +18,23 @@ from intake.catalog.local import LocalCatalogEntry
 from . import __version__
 from ._display import display_options as _display_opts
 from ._search import search
+
+
+def _posixpath_constructor(
+    loader: yaml.Loader, node: yaml.nodes.SequenceNode
+) -> PosixPath:
+    """
+    Allows us to represent a path within a yaml file as a path object, not just a string.
+    Necessitated by changes to access-nri-intake-catalog passing around path objects, not
+    raw strings representing these paths.
+    """
+    value = loader.construct_sequence(node, deep=True)
+    return PosixPath(*value)
+
+
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/object/apply:pathlib.PosixPath", _posixpath_constructor
+)
 
 
 class DfFileCatalogError(Exception):
