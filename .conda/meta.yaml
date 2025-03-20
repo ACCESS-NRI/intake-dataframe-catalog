@@ -19,8 +19,8 @@ requirements:
     - pip
     - versioneer
   run:
-    - python >=3.9
-    - intake <2.0.0
+    - python >=3.10
+    - intake >=0.7.0
     - pandas
 
 test:

@@ -15,10 +15,25 @@ from intake.catalog import Catalog
 from intake.catalog.local import LocalCatalogEntry
 
 from . import __version__
+from ._display import display_options as _display_opts
 from ._search import search
 
-pd.set_option("display.max_colwidth", 200)
-pd.set_option("display.max_rows", None)
+
+def _posixpath_constructor(
+    loader: yaml.Loader, node: yaml.nodes.SequenceNode
+) -> PosixPath:
+    """
+    Allows us to represent a path within a yaml file as a path object, not just a string.
+    Necessitated by changes to access-nri-intake-catalog passing around path objects, not
+    raw strings representing these paths.
+    """
+    value = loader.construct_sequence(node, deep=True)
+    return PosixPath(*value)
+
+
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/object/apply:pathlib.PosixPath", _posixpath_constructor
+)
 
 
 class DfFileCatalogError(Exception):
@@ -194,10 +209,13 @@ class DfFileCatalog(Catalog):
         """
         Display the dataframe catalog object as a rich object in an IPython session.
         """
-        from IPython.display import HTML, display
+        if _display_opts.is_notebook:
+            from IPython.display import HTML, display
 
-        contents = self._repr_html_()
-        display(HTML(contents))
+            contents = self._repr_html_()
+            display(HTML(contents))
+        else:
+            print(self)
 
     def keys(self) -> list[str]:
         """
@@ -266,6 +284,11 @@ class DfFileCatalog(Catalog):
         overwrite: bool, optional
             If True, overwrite all existing entries in the dataframe catalog with name_column entries
             that match the name of this source. Otherwise the entry is appended to the dataframe catalog.
+
+        Raises
+        ------
+        DfFileCatalogError
+            If the source cannot be added to the dataframe catalog.
         """
 
         metadata = metadata or {}
@@ -293,11 +316,27 @@ class DfFileCatalog(Catalog):
             # Check that new entries contain iterables when they should
             entry_iterable_columns = _columns_with_iterables(row)
             if entry_iterable_columns != self.columns_with_iterables:
-                raise DfFileCatalogError(
-                    f"Cannot add entry with iterable metadata columns: {entry_iterable_columns} "
-                    f"to dataframe catalog with iterable metadata columns: {self.columns_with_iterables}. "
-                    " Please ensure that metadata entries are consistent."
+                missing_iterable_cols = set(self.columns_with_iterables) - set(
+                    entry_iterable_columns
                 )
+                unexpected_iterable_cols = set(entry_iterable_columns) - set(
+                    self.columns_with_iterables
+                )
+
+                if missing_iterable_cols:
+                    err_msg = (
+                        f"Expected iterable metadata columns: {list(self.columns_with_iterables)}. "
+                        f"Unable to add entry with iterable metadata columns '{list(entry_iterable_columns)}' to dataframe catalog: "
+                        f"columns {list(missing_iterable_cols)} must be iterable to ensure metadata entries are consistent."
+                    )
+                elif unexpected_iterable_cols:
+                    err_msg = (
+                        f"Expected iterable metadata columns: {list(self.columns_with_iterables)}. "
+                        f"Unable to add entry with metadata columns '{list(entry_iterable_columns)}' to dataframe catalog: "
+                        f"columns {list(unexpected_iterable_cols)} must not be iterable to ensure metadata entries are consistent."
+                    )
+
+                raise DfFileCatalogError(err_msg)
 
             if set(self.columns) == set(row.columns):
                 if (
