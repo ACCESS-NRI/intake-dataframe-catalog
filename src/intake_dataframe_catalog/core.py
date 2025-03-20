@@ -4,6 +4,7 @@
 import ast
 import warnings
 from io import UnsupportedOperation
+from pathlib import PosixPath
 from typing import Any, Optional
 
 import fsspec
