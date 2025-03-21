@@ -1,6 +1,7 @@
 # Copyright 2023 ACCESS-NRI and contributors. See the top-level COPYRIGHT file for details.
 # SPDX-License-Identifier: Apache-2.0
 
+
 import re
 
 import pandas as pd
@@ -136,7 +137,7 @@ def test_is_pattern(value, expected):
             ],
         ),
         (
-            {"B": [re.compile(r"^a$")], "C": [0, 3]},
+            {"B": ["^a$"], "C": [0, 3]},
             [
                 {
                     "A": "aaa",
@@ -176,7 +177,7 @@ def test_is_pattern(value, expected):
             ],
         ),
         (
-            {"A": [re.compile("^a.*a$", flags=re.IGNORECASE)]},
+            {"A": ["(?i)^a.*a$"]},
             [
                 {
                     "A": "aaa",
@@ -333,7 +334,7 @@ def test_search(query, expected):
                 },
                 {
                     "A": "cat1",
-                    "B": ["a", "c"],
+                    "B": ["c", "a"],
                     "C": ("cz", "cy"),
                     "D": {0, 1},
                     "E": "yyy",
@@ -353,7 +354,7 @@ def test_search(query, expected):
                 },
                 {
                     "A": "cat1",
-                    "B": ["a", "c"],
+                    "B": ["c", "a"],
                     "C": ("cz", "cy"),
                     "D": {0, 1},
                     "E": "yyy",
