@@ -9,6 +9,7 @@ from typing import Any, Optional
 
 import fsspec
 import intake
+import itables
 import pandas as pd
 import tlz
 import yaml
@@ -589,6 +590,14 @@ class DfFileCatalog(Catalog):
         mostly for internal use. Users may find the `df_summary` property more useful.
         """
         return self._df
+
+    @property
+    def interactive(self) -> None:
+        """
+        Use itables to display the catalog in an interactive table. Use polars
+        for performance ideally. Fall back to pandas if not.
+        """
+        return itables.show(self._df)
 
     @property
     def columns(self) -> list[str]:
