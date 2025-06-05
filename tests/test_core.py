@@ -15,7 +15,14 @@ from intake_dataframe_catalog.core import DfFileCatalog, DfFileCatalogError
 
 
 @pytest.mark.parametrize("mode", ["r", "a", "r+"])
-@pytest.mark.parametrize("kwargs", [{}, {"columns_with_iterables": ["variable"]}])
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {},
+        {"columns_with_iterables": ["variable"]},
+        {"columns_with_iterables": "variable"},
+    ],
+)
 def test_load(catalog_path, mode, kwargs):
     """
     Test loading catalog from a file

@@ -54,13 +54,13 @@ class DfFileCatalog(Catalog):
 
     def __init__(
         self,
-        path: Optional[str] = None,
+        path: str | None = None,
         yaml_column: str = "yaml",
         name_column: str = "name",
         mode: str = "r",
-        columns_with_iterables: Optional[list[str]] = None,
-        storage_options: Optional[dict[str, Any]] = None,
-        read_kwargs: Optional[dict[str, Any]] = None,
+        columns_with_iterables: list[str] | None = None,
+        storage_options: dict[str, Any] | None = None,
+        read_kwargs: dict[str, Any] | None = None,
         **intake_kwargs: Any,
     ):
         """
@@ -93,6 +93,9 @@ class DfFileCatalog(Catalog):
         intake_kwargs: dict, optional
             Additional keyword arguments to pass to the intake :py:class:`~intake.catalog.Catalog` base class.
         """
+
+        if isinstance(columns_with_iterables, str):
+            columns_with_iterables = [columns_with_iterables]
 
         self.path = path
         self.yaml_column = yaml_column
