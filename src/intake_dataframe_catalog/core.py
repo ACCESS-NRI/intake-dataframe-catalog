@@ -597,8 +597,7 @@ class DfFileCatalog(Catalog):
     @property
     def interactive(self) -> None:
         """
-        Use itables to display the catalog in an interactive table. Use polars
-        for performance ideally. Fall back to pandas if not.
+        Use itables to display the catalog in an interactive table.
         """
         return itables.show(self._df)
 
