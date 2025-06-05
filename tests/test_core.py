@@ -33,6 +33,9 @@ def test_load(catalog_path, mode, kwargs):
 
     _assert_DfFileCatalog(cat)
 
+    # Case 3 would fail prior to https://github.com/ACCESS-NRI/intake-dataframe-catalog/pull/80
+    cat.search(variable="tas")
+
     if mode == "r":
         with pytest.raises(UnsupportedOperation) as excinfo:
             cat.save()
