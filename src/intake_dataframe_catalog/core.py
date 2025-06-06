@@ -599,7 +599,27 @@ class DfFileCatalog(Catalog):
         """
         Use itables to display the catalog in an interactive table.
         """
-        return itables.show(self._df)
+        _df = self._df.copy()
+        _df = (
+            _df.set_index(self.name_column)  # Put name column first
+            .reset_index()  # As above
+            .drop(columns=self.yaml_column)  # Drop yaml column
+            .explode(
+                self.columns_with_iterables, ignore_index=True
+            )  # explode iterables - otherwise
+            # we lose variables into ellipses.
+        )
+        return itables.show(
+            _df,
+            search={"regex": True, "caseInsensitive": True},
+            layout={"top1": "searchPanes"},
+            searchPanes={
+                "layout": "columns-3",
+                "cascadePanes": True,
+                "columns": [i for i, _ in enumerate(_df.columns)],
+            },
+            maxBytes=0,
+        )
 
     @property
     def columns(self) -> list[str]:
