@@ -604,11 +604,11 @@ class DfFileCatalog(Catalog):
             _df.set_index(self.name_column)  # Put name column first
             .reset_index()  # As above
             .drop(columns=self.yaml_column)  # Drop yaml column
-            .explode(
-                self.columns_with_iterables, ignore_index=True
-            )  # explode iterables - otherwise
-            # we lose variables into ellipses.
         )
+        for col in self.columns_with_iterables:
+            _df = _df.explode(col, ignore_index=True)  # explode iterables - otherwise
+            # we lose variables into ellipses.
+
         return itables.show(
             _df,
             search={"regex": True, "caseInsensitive": True},
