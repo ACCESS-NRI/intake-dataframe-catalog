@@ -9,6 +9,7 @@ from typing import Any, Optional
 
 import fsspec
 import intake
+import itables
 import pandas as pd
 import tlz
 import yaml
@@ -53,13 +54,13 @@ class DfFileCatalog(Catalog):
 
     def __init__(
         self,
-        path: Optional[str] = None,
+        path: str | None = None,
         yaml_column: str = "yaml",
         name_column: str = "name",
         mode: str = "r",
-        columns_with_iterables: Optional[list[str]] = None,
-        storage_options: Optional[dict[str, Any]] = None,
-        read_kwargs: Optional[dict[str, Any]] = None,
+        columns_with_iterables: list[str] | None = None,
+        storage_options: dict[str, Any] | None = None,
+        read_kwargs: dict[str, Any] | None = None,
         **intake_kwargs: Any,
     ):
         """
@@ -92,6 +93,9 @@ class DfFileCatalog(Catalog):
         intake_kwargs: dict, optional
             Additional keyword arguments to pass to the intake :py:class:`~intake.catalog.Catalog` base class.
         """
+
+        if isinstance(columns_with_iterables, str):
+            columns_with_iterables = [columns_with_iterables]
 
         self.path = path
         self.yaml_column = yaml_column
@@ -589,6 +593,33 @@ class DfFileCatalog(Catalog):
         mostly for internal use. Users may find the `df_summary` property more useful.
         """
         return self._df
+
+    @property
+    def interactive(self) -> None:
+        """
+        Use itables to display the catalog in an interactive table.
+        """
+        _df = self._df.copy()
+        _df = (
+            _df.set_index(self.name_column)  # Put name column first
+            .reset_index()  # As above
+            .drop(columns=self.yaml_column)  # Drop yaml column
+        )
+        for col in self.columns_with_iterables:
+            _df = _df.explode(col, ignore_index=True)  # explode iterables - otherwise
+            # we lose variables into ellipses.
+
+        return itables.show(
+            _df,
+            search={"regex": True, "caseInsensitive": True},
+            layout={"top1": "searchPanes"},
+            searchPanes={
+                "layout": "columns-3",
+                "cascadePanes": True,
+                "columns": [i for i, _ in enumerate(_df.columns)],
+            },
+            maxBytes=0,
+        )
 
     @property
     def columns(self) -> list[str]:

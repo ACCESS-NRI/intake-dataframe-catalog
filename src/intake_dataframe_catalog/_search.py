@@ -37,7 +37,7 @@ def _is_pattern(input: Union[str, Pattern, Collection]) -> bool:
 def search(
     df: pd.DataFrame,
     query: dict[str, Any],
-    columns_with_iterables: Union[list[str], set[str]],
+    columns_with_iterables: Collection[str],
     name_column: str,
     require_all: bool = False,
 ) -> pd.DataFrame:
@@ -67,6 +67,9 @@ def search(
         return df
     if require_all and len(query.get(name_column, [""])) > 1:
         return df.head(0)
+
+    if isinstance(columns_with_iterables, str):
+        columns_with_iterables = [columns_with_iterables]
 
     lf: pl.LazyFrame = pl.from_pandas(df).lazy()
     all_cols = lf.collect_schema().names()

@@ -15,6 +15,7 @@ classifiers = [
 ]
 dependencies = [
     "intake >= 0.7.0",
+    "itables",
     "pandas",
     "polars>=1.12"
 ]
