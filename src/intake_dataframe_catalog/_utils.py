@@ -34,32 +34,36 @@ class MinimalExploder:
 
         """
         if self._length_patterns is None:
-            self._analyze_patterns()
+            self._length_patterns = self._analyze_patterns()
         return self._length_patterns
 
     @property
     def explodable_groups(self) -> list[list[str]]:
         """Get groups of columns that can be exploded together."""
         if self._explodable_groups is None:
-            self._compute_groups()
+            self._explodable_groups = self._compute_groups()
         return self._explodable_groups
 
-    def _analyze_patterns(self) -> None:
-        """Analyze length patterns of all list columns."""
-        self._length_patterns = {}
+    def _analyze_patterns(self) -> dict[str, tuple[int, ...]]:
+        """Analyze length patterns of all list columns. Returns a value
+        rather than setting self._length_patterns to shut up mypy."""
+        _length_patterns = {}
 
         for col in self.list_columns:
             lengths = self.df.select(pl.col(col).list.len()).to_series().to_list()
-            self._length_patterns[col] = tuple(lengths)
+            _length_patterns[col] = tuple(lengths)
+
+        return _length_patterns
 
     def _compute_groups(self):
-        """Compute explodable groups based on length patterns."""
+        """Compute explodable groups based on length patterns. Returns a value
+        rather than setting self._explodable_groups to shut up mypy."""
         pattern_groups = defaultdict(list)
 
         for col, pattern in self.length_patterns.items():
             pattern_groups[pattern].append(col)
 
-        self._explodable_groups = list(pattern_groups.values())
+        return list(pattern_groups.values())
 
     @property
     def summary(self) -> dict:
