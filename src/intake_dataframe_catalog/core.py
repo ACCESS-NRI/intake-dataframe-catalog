@@ -11,6 +11,7 @@ import fsspec
 import intake
 import itables
 import pandas as pd
+import polars as pl
 import tlz
 import yaml
 from intake.catalog import Catalog
@@ -19,6 +20,7 @@ from intake.catalog.local import LocalCatalogEntry
 from . import __version__
 from ._display import display_options as _display_opts
 from ._search import search
+from ._utils import MinimalExploder
 
 
 def _posixpath_constructor(
@@ -599,24 +601,28 @@ class DfFileCatalog(Catalog):
         """
         Use itables to display the catalog in an interactive table.
         """
-        _df = self._df.copy()
-        _df = (
-            _df.set_index(self.name_column)  # Put name column first
-            .reset_index()  # As above
-            .drop(columns=self.yaml_column)  # Drop yaml column
-        )
-        for col in self.columns_with_iterables:
-            _df = _df.explode(col, ignore_index=True)  # explode iterables - otherwise
-            # we lose variables into ellipses.
+        pl_df = pl.from_pandas(self._df)
+
+        non_name_cols = [
+            col
+            for col in pl_df.columns
+            if col not in [self.name_column, self.yaml_column]
+        ]
+
+        non_name_cols.insert(0, self.name_column)  # Put name column first
+
+        pl_df = pl_df.select(non_name_cols)
+
+        exploded_df = MinimalExploder(pl_df)()
 
         return itables.show(
-            _df,
+            exploded_df,
             search={"regex": True, "caseInsensitive": True},
             layout={"top1": "searchPanes"},
             searchPanes={
                 "layout": "columns-3",
                 "cascadePanes": True,
-                "columns": [i for i, _ in enumerate(_df.columns)],
+                "columns": [i for i, _ in enumerate(pl_df.columns)],
             },
             maxBytes=0,
         )
