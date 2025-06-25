@@ -9,7 +9,9 @@ from typing import Any, Optional
 
 import fsspec
 import intake
+import itables
 import pandas as pd
+import polars as pl
 import tlz
 import yaml
 from intake.catalog import Catalog
@@ -18,6 +20,7 @@ from intake.catalog.local import LocalCatalogEntry
 from . import __version__
 from ._display import display_options as _display_opts
 from ._search import search
+from ._utils import MinimalExploder
 
 
 def _posixpath_constructor(
@@ -53,13 +56,13 @@ class DfFileCatalog(Catalog):
 
     def __init__(
         self,
-        path: Optional[str] = None,
+        path: str | None = None,
         yaml_column: str = "yaml",
         name_column: str = "name",
         mode: str = "r",
-        columns_with_iterables: Optional[list[str]] = None,
-        storage_options: Optional[dict[str, Any]] = None,
-        read_kwargs: Optional[dict[str, Any]] = None,
+        columns_with_iterables: list[str] | None = None,
+        storage_options: dict[str, Any] | None = None,
+        read_kwargs: dict[str, Any] | None = None,
         **intake_kwargs: Any,
     ):
         """
@@ -92,6 +95,9 @@ class DfFileCatalog(Catalog):
         intake_kwargs: dict, optional
             Additional keyword arguments to pass to the intake :py:class:`~intake.catalog.Catalog` base class.
         """
+
+        if isinstance(columns_with_iterables, str):
+            columns_with_iterables = [columns_with_iterables]
 
         self.path = path
         self.yaml_column = yaml_column
@@ -589,6 +595,39 @@ class DfFileCatalog(Catalog):
         mostly for internal use. Users may find the `df_summary` property more useful.
         """
         return self._df
+
+    @property
+    def interactive(self) -> None:
+        """
+        Use itables to display the catalog in an interactive table.
+
+        May not work well in all browsers, particularly Firefox.
+        """
+        pl_df = pl.from_pandas(self._df)
+
+        non_name_cols = [
+            col
+            for col in pl_df.columns
+            if col not in [self.name_column, self.yaml_column]
+        ]
+
+        non_name_cols.insert(0, self.name_column)  # Put name column first
+
+        pl_df = pl_df.select(non_name_cols)
+
+        exploded_df = MinimalExploder(pl_df)()
+
+        return itables.show(
+            exploded_df,
+            search={"regex": True, "caseInsensitive": True},
+            layout={"top1": "searchPanes"},
+            searchPanes={
+                "layout": "columns-3",
+                "cascadePanes": True,
+                "columns": [i for i, _ in enumerate(pl_df.columns)],
+            },
+            maxBytes=0,
+        )
 
     @property
     def columns(self) -> list[str]:

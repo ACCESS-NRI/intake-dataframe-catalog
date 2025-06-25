@@ -15,7 +15,14 @@ from intake_dataframe_catalog.core import DfFileCatalog, DfFileCatalogError
 
 
 @pytest.mark.parametrize("mode", ["r", "a", "r+"])
-@pytest.mark.parametrize("kwargs", [{}, {"columns_with_iterables": ["variable"]}])
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {},
+        {"columns_with_iterables": ["variable"]},
+        {"columns_with_iterables": "variable"},
+    ],
+)
 def test_load(catalog_path, mode, kwargs):
     """
     Test loading catalog from a file
@@ -25,6 +32,9 @@ def test_load(catalog_path, mode, kwargs):
     cat = intake.open_df_catalog(path=str(path), mode=mode, **kwargs)
 
     _assert_DfFileCatalog(cat)
+
+    # Case 3 would fail prior to https://github.com/ACCESS-NRI/intake-dataframe-catalog/pull/80
+    cat.search(variable="tas")
 
     if mode == "r":
         with pytest.raises(UnsupportedOperation) as excinfo:
