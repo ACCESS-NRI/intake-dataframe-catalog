@@ -600,6 +600,8 @@ class DfFileCatalog(Catalog):
     def interactive(self) -> None:
         """
         Use itables to display the catalog in an interactive table.
+
+        May not work well in all browsers, particularly Firefox.
         """
         pl_df = pl.from_pandas(self._df)
 
