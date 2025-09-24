@@ -2,7 +2,7 @@ name: intake-df-cat-test
 channels:
   - conda-forge
 dependencies:
-  - python=3.10
+  - python=3.13
   - black
   - intake>=0.7
   - intake-esm
