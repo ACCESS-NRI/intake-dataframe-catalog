@@ -101,52 +101,65 @@ def search(
     for column in columns_with_iterables:
         lf = lf.explode(column)
 
-    schema = lf.collect_schema()
-    matches_exprs, filter_exprs, tmp_cols = [], [], []
-
+    tmp_cols = []
     for colname, subquery in query.items():
-        is_string = schema[colname] == pl.Utf8
-        is_regex = is_string and _is_pattern(subquery)
-
-        if is_regex:
+        if lf.collect_schema()[colname] == pl.Utf8 and _is_pattern(subquery):
+            # Build match expressions
             match_exprs = [
-                pl.when(pl.col(colname).str.contains(q)).then(pl.lit(q))
+                pl.when(pl.col(colname).str.contains(q)).then(pl.lit(q)).otherwise(None)
                 for q in subquery
             ]
-            matches_exprs.append(
+
+            # Add the combined list column
+            lf = lf.with_columns(
                 pl.concat_list(match_exprs)
                 .list.drop_nulls()
                 .alias(f"{colname}_matches")
             )
-            tmp_cols.append(f"{colname}_matches")
-        else:
-            filter_exprs.append(pl.col(colname).is_in(subquery))
 
-    if matches_exprs:
-        lf = lf.with_columns(matches_exprs)
-    if filter_exprs:
-        lf = lf.filter(pl.all_horizontal(filter_exprs))
+            tmp_cols.append(f"{colname}_matches")
+
+        else:
+            lf = lf.filter(pl.col(colname).is_in(subquery))
 
     lf = (
-        lf.group_by("index")
+        lf.group_by("index")  # Piece the exploded columns back together
         .agg(
-            [
-                pl.col(c).flatten().unique(maintain_order=True)
-                for c in [*all_cols, *tmp_cols]
+            [  # Re-aggregate the exploded columns into lists, flatten them out (imploding creates nested lists) and drop duplicates
+                pl.col(col).implode().flatten().unique(maintain_order=True)
+                for col in [*all_cols, *tmp_cols]
             ]
         )
-        .explode(name_column)
+        .drop("index")  # We don't need the index anymore
+        .explode(name_column)  # Explode the name column back out so we can select on it
     )
 
     if require_all and iterable_qcols:
-        lf = lf.filter(
-            pl.all_horizontal(
+        if group_on_names:
+            # Group by name_column and aggregate the other columns into lists
+            # first in this instance. Essentially the opposite of the previous
+            # group_by("index") operation.
+            namelist_lf = lf.group_by(name_column).agg(
                 [
-                    pl.col(f"{c}_matches").list.len() >= len(query[c])
-                    for c in iterable_qcols
+                    pl.col(col).explode().flatten().unique(maintain_order=True)
+                    for col in (set(all_cols) | set(tmp_cols) - {name_column})
                 ]
             )
+        else:
+            namelist_lf = lf
+
+        namelist = (
+            namelist_lf.filter(
+                [
+                    pl.col(f"{colname}_matches").list.len() >= len(query[colname])
+                    for colname in iterable_qcols
+                ]
+            )
+            .select(name_column)
+            # .collect()
+            .to_series()
         )
+        lf = lf.filter(pl.col(name_column).is_in(namelist))
 
     lf = lf.select(*all_cols)
 
