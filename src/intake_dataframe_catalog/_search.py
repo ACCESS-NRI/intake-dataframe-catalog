@@ -71,7 +71,7 @@ def search(
     if isinstance(columns_with_iterables, str):
         columns_with_iterables = [columns_with_iterables]
 
-    lf: pl.LazyFrame = pl.from_pandas(df).lazy()
+    lf: pl.LazyFrame = pl.from_pandas(df)  # .lazy()
     all_cols = lf.collect_schema().names()
 
     # Keep the iterable columns and their dtypes hanging around for later
@@ -101,10 +101,24 @@ def search(
     for column in columns_with_iterables:
         lf = lf.explode(column)
 
+    tmp_cols = []
     for colname, subquery in query.items():
         if lf.collect_schema()[colname] == pl.Utf8 and _is_pattern(subquery):
-            pattern = "|".join(subquery)
-            lf = lf.filter(pl.col(colname).str.contains(pattern))
+            # Build match expressions
+            match_exprs = [
+                pl.when(pl.col(colname).str.contains(q)).then(pl.lit(q)).otherwise(None)
+                for q in subquery
+            ]
+
+            # Add the combined list column
+            lf = lf.with_columns(
+                pl.concat_list(match_exprs)
+                .list.drop_nulls()
+                .alias(f"{colname}_matches")
+            )
+
+            tmp_cols.append(f"{colname}_matches")
+
         else:
             lf = lf.filter(pl.col(colname).is_in(subquery))
 
@@ -113,7 +127,7 @@ def search(
         .agg(
             [  # Re-aggregate the exploded columns into lists, flatten them out (imploding creates nested lists) and drop duplicates
                 pl.col(col).implode().flatten().unique(maintain_order=True)
-                for col in all_cols
+                for col in [*all_cols, *tmp_cols]
             ]
         )
         .drop("index")  # We don't need the index anymore
@@ -128,7 +142,7 @@ def search(
             namelist_lf = lf.group_by(name_column).agg(
                 [
                     pl.col(col).explode().flatten().unique(maintain_order=True)
-                    for col in (set(all_cols) - {name_column})
+                    for col in (set(all_cols) | set(tmp_cols) - {name_column})
                 ]
             )
         else:
@@ -137,17 +151,19 @@ def search(
         namelist = (
             namelist_lf.filter(
                 [
-                    pl.col(colname).list.len() >= len(query[colname])
+                    pl.col(f"{colname}_matches").list.len() >= len(query[colname])
                     for colname in iterable_qcols
                 ]
             )
             .select(name_column)
-            .collect()
+            # .collect()
             .to_series()
         )
         lf = lf.filter(pl.col(name_column).is_in(namelist))
 
-    df = lf.explode(list(cols_to_deiter)).collect().to_pandas()
+    lf = lf.select(*all_cols)
+
+    df = lf.explode(list(cols_to_deiter)).to_pandas()  # .collect().to_pandas()
 
     for col, dtype in iterable_dtypes.items():
         df[col] = df[col].apply(lambda x: dtype(x))
