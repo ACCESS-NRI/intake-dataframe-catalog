@@ -1,6 +1,7 @@
 name: intake-df-cat-test
 channels:
   - conda-forge
+  - accessnri
 dependencies:
   - black
   - intake>=0.7
