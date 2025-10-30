@@ -62,7 +62,6 @@ def search(
     dataframe: :py:class:`~pandas.DataFrame`
             A new dataframe with the entries satisfying the query criteria.
     """
-
     if not query:
         return df
     if require_all and len(query.get(name_column, [""])) > 1:
@@ -149,7 +148,7 @@ def search(
             namelist_lf = lf.group_by(name_column).agg(
                 [
                     pl.col(col).explode().flatten().unique(maintain_order=True)
-                    for col in (set(all_cols) | set(tmp_cols) - {name_column})
+                    for col in (set(all_cols).union(set(tmp_cols)) - {name_column})
                 ]
             )
         else:
