@@ -71,7 +71,7 @@ def search(
     if isinstance(columns_with_iterables, str):
         columns_with_iterables = [columns_with_iterables]
 
-    lf: pl.LazyFrame = pl.from_pandas(df)  # .lazy()
+    lf: pl.LazyFrame = pl.from_pandas(df).lazy()
     all_cols = lf.collect_schema().names()
 
     # Keep the iterable columns and their dtypes hanging around for later
@@ -109,24 +109,30 @@ def search(
                 pl.when(pl.col(colname).str.contains(q)).then(pl.lit(q)).otherwise(None)
                 for q in subquery
             ]
-
-            # Add the combined list column
-            lf = lf.with_columns(
-                pl.concat_list(match_exprs)
-                .list.drop_nulls()
-                .alias(f"{colname}_matches")
-            )
-
-            tmp_cols.append(f"{colname}_matches")
-
         else:
-            lf = lf.filter(pl.col(colname).is_in(subquery))
+            match_exprs = [
+                pl.when(pl.col(colname).is_in(subquery))
+                .then(pl.lit(subquery))
+                .otherwise(None)
+            ]
+
+        lf = lf.with_columns(
+            pl.when(pl.concat_list(match_exprs).list.drop_nulls().list.len() > 0)
+            .then(pl.concat_list(match_exprs))
+            .otherwise(
+                None
+            )  # This whole when-then-otherwise is to map empty lists to null
+            .alias(f"{colname}_matches")
+        )
+
+        lf = lf.filter(pl.col(f"{colname}_matches").is_not_null())
+        tmp_cols.append(f"{colname}_matches")
 
     lf = (
         lf.group_by("index")  # Piece the exploded columns back together
         .agg(
-            [  # Re-aggregate the exploded columns into lists, flatten them out (imploding creates nested lists) and drop duplicates
-                pl.col(col).implode().flatten().unique(maintain_order=True)
+            [  # Re-aggregate the exploded columns into lists, flatten them out (imploding creates nested lists) and drop duplicates and nulls
+                pl.col(col).implode().flatten().unique(maintain_order=True).drop_nulls()
                 for col in [*all_cols, *tmp_cols]
             ]
         )
@@ -156,14 +162,14 @@ def search(
                 ]
             )
             .select(name_column)
-            # .collect()
+            .collect()
             .to_series()
         )
         lf = lf.filter(pl.col(name_column).is_in(namelist))
 
     lf = lf.select(*all_cols)
 
-    df = lf.explode(list(cols_to_deiter)).to_pandas()  # .collect().to_pandas()
+    df = lf.explode(list(cols_to_deiter)).collect().to_pandas()
 
     for col, dtype in iterable_dtypes.items():
         df[col] = df[col].apply(lambda x: dtype(x))
