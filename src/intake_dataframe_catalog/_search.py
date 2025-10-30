@@ -110,10 +110,11 @@ def search(
                 for q in subquery
             ]
         else:
+            # Can't unify these branches with literal=True, because that assumes
+            # non-pattern columns *must be strings*, which is not the case.
             match_exprs = [
-                pl.when(pl.col(colname).is_in(subquery))
-                .then(pl.lit(subquery))
-                .otherwise(None)
+                pl.when(pl.col(colname) == q).then(pl.lit(q)).otherwise(None)
+                for q in subquery
             ]
 
         lf = lf.with_columns(
