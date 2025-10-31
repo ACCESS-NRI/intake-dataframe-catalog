@@ -157,7 +157,8 @@ def search(
         namelist = (
             namelist_lf.filter(
                 [
-                    pl.col(f"{colname}_matches").list.len() >= len(query[colname])
+                    pl.col(f"{colname}_matches").list.drop_nulls().list.len()
+                    >= len(query[colname])
                     for colname in iterable_qcols
                 ]
             )
