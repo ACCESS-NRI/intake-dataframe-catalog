@@ -57,10 +57,13 @@ def search(
     require_all: bool
         If True, groupby name_column and return only entries that match
         for all elements in each group
+
     Returns
     -------
     dataframe: :py:class:`~pandas.DataFrame`
             A new dataframe with the entries satisfying the query criteria.
+
+    @TODO: Cleanup & refactoring needed.
     """
     if not query:
         return df
