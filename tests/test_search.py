@@ -7,7 +7,10 @@ import re
 import pandas as pd
 import pytest
 
-from intake_dataframe_catalog._search import _is_pattern, search
+from intake_dataframe_catalog._search import (
+    _is_pattern,
+    search,
+)
 
 
 @pytest.mark.parametrize(
@@ -423,9 +426,9 @@ def test_search_variable_regex_and_exact():
         require_all=True,
     )
     matched_experiments = results["experiment"].tolist()
-    assert matched_experiments == [
-        "exp1"
-    ], f"Failed case 1: Expected only exp1, got {matched_experiments}"
+    assert matched_experiments == ["exp1"], (
+        f"Failed case 1: Expected only exp1, got {matched_experiments}"
+    )
 
     # Now try with all variables as regex
     variable_regex = [
@@ -443,6 +446,6 @@ def test_search_variable_regex_and_exact():
         require_all=True,
     )
     matched_experiments_regex = results_regex["experiment"].tolist()
-    assert matched_experiments_regex == [
-        "exp1"
-    ], f"Failed case 2: Expected only exp1, got {matched_experiments_regex}"
+    assert matched_experiments_regex == ["exp1"], (
+        f"Failed case 2: Expected only exp1, got {matched_experiments_regex}"
+    )
