@@ -152,7 +152,7 @@ def test__group_and_filter_on_index(lf, name_column, all_cols, tmp_cols, expecte
     because the grouping may not preserve order.
     """
     output = _group_and_filter_on_index(lf, name_column, all_cols, tmp_cols)
-    pl_assert_frame_equal(output.collect(), expected.collect(), check_row_order=False)
+    pl_assert_frame_equal(output, expected, check_row_order=False)
 
 
 @pytest.mark.parametrize(

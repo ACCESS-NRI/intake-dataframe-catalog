@@ -130,7 +130,7 @@ def _group_and_filter_on_index(
         lf.group_by("index")  # Piece the exploded columns back together
         .agg(
             [  # Re-aggregate the exploded columns into lists, flatten them out (imploding creates nested lists) and drop duplicates and nulls
-                pl.col(col).implode().flatten().unique(maintain_order=True).drop_nulls()
+                pl.col(col).flatten().unique(maintain_order=True).drop_nulls()
                 for col in [*all_cols, *tmp_cols]
             ]
         )
