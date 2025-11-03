@@ -149,7 +149,9 @@ class DfFileCatalog(Catalog):
                     if self.format == "csv":
                         self._df = pd.read_csv(fobj, **self._read_kwargs)
                     elif self.format == "parquet":
-                        self._df = pd.read_parquet(fobj, **self._read_kwargs)
+                        read_kwargs = self._read_kwargs.copy()
+                        read_kwargs.pop("converters", None)
+                        self._df = pd.read_parquet(fobj, **read_kwargs)
                 if self.yaml_column not in self.df.columns:
                     raise DfFileCatalogError(
                         f"'{self.yaml_column}' is not a column in the dataframe catalog. Please provide "
@@ -265,7 +267,7 @@ class DfFileCatalog(Catalog):
             return {col: [] for col in self.columns}
         else:
             return self.df.apply(
-                lambda x: list(_find_unique(x, self.columns_with_iterables)),
+                lambda x: list(_find_unique(x)),
                 result_type="reduce",
             ).to_dict()
 
@@ -689,7 +691,7 @@ class DfFileCatalog(Catalog):
         elif self._df_summary is None:
             self._df_summary = self.df.groupby(self.name_column).agg(
                 {
-                    col: lambda x: _find_unique(x, self.columns_with_iterables)
+                    col: lambda x: _find_unique(x)
                     for col in self.df.columns.drop(
                         [self.name_column, self.yaml_column]
                     )
@@ -699,14 +701,13 @@ class DfFileCatalog(Catalog):
         return self._df_summary
 
 
-def _find_unique(series: pd.Series, columns_with_iterables: list[str]) -> set[str]:
+def _find_unique(series: pd.Series) -> set[str]:
     """
-    Return a set of unique values in a series
+    Return a set of unique values in a series.
+
+    Type ignore necessary as mypy cannot infer series in here => polars series out correctly
     """
-    values = series.dropna()
-    if series.name in columns_with_iterables:
-        values = tlz.concat(values)
-    return set(values)
+    return set(pl.from_pandas(series).explode().unique().drop_nulls())  # type: ignore
 
 
 def _columns_with_iterables(df: pd.DataFrame, sample: bool = False) -> list[str]:
