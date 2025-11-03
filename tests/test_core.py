@@ -23,11 +23,15 @@ from intake_dataframe_catalog.core import DfFileCatalog, DfFileCatalogError
         {"columns_with_iterables": "variable"},
     ],
 )
-def test_load(catalog_path, mode, kwargs):
+@pytest.mark.parametrize(
+    "fname",
+    ["dfcat.csv", "dfcat.parquet"],
+)
+def test_load(catalog_path, mode, kwargs, fname):
     """
     Test loading catalog from a file
     """
-    path = catalog_path / "dfcat.csv"
+    path = catalog_path / fname
 
     cat = intake.open_df_catalog(path=str(path), mode=mode, **kwargs)
 
