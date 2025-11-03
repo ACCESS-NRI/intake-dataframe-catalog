@@ -511,10 +511,13 @@ def test__promote_query_qcols(
     expected_all_cols,
     expected_cols_to_deiter,
 ):
-    output_lf, iterable_qcols, columns_with_iterables, cols_to_deiter = (
-        _promote_query_qcols(
-            lf, query, columns_with_iterables, all_cols, cols_to_deiter
-        )
+    (
+        output_lf,
+        iterable_qcols,
+        columns_with_iterables,
+        cols_to_deiter,
+    ) = _promote_query_qcols(
+        lf, query, columns_with_iterables, all_cols, cols_to_deiter
     )
 
     assert iterable_qcols == expected_iterable_cols

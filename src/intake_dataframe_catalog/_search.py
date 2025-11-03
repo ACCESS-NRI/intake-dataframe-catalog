@@ -86,10 +86,13 @@ def search(
         # If we've specified require all but we don't have any iterable columns
         # in the query we promote the query columns to iterables at this point.
         group_on_names = True
-        lf, iterable_qcols, columns_with_iterables, cols_to_deiter = (
-            _promote_query_qcols(
-                lf, query, columns_with_iterables, all_cols, cols_to_deiter
-            )
+        (
+            lf,
+            iterable_qcols,
+            columns_with_iterables,
+            cols_to_deiter,
+        ) = _promote_query_qcols(
+            lf, query, columns_with_iterables, all_cols, cols_to_deiter
         )
     else:
         group_on_names = False
