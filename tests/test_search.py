@@ -381,3 +381,68 @@ def test_search_columns_with_iterables(query, require_all, expected):
         require_all=require_all,
     ).to_dict(orient="records")
     assert results == expected
+
+
+def test_search_variable_regex_and_exact():
+    """
+    Simulate a catalog DataFrame. Reproduced from
+    https://github.com/ACCESS-NRI/access-nri-intake-catalog/issues/527
+    """
+    df = pd.DataFrame(
+        {
+            "model": ["ACCESS-OM2-1", "ACCESS-OM2-2", "ACCESS-OM2-3"],
+            "variable": [
+                ["tx_trans", "ty_trans", "mld", "area_t", "dht", "dzt"],
+                ["tx_trans", "ty_trans", "mld", "area_t"],  # missing dht/dzt
+                [
+                    "tx_trans",
+                    "ty_trans",
+                    "mld",
+                    "dht",
+                    "dzt",
+                ],  # missing area_t - but will match twice on "^d[hz]t$",
+            ],
+            "experiment": ["exp1", "exp2", "exp3"],
+        }
+    )
+
+    variable = [
+        "tx_trans",
+        "ty_trans",
+        "mld",
+        "area_t",
+        "^d[hz]t$",
+    ]
+
+    # Should only match rows containing all required variables - only exp1 as it has both dht and dzt
+    results = search(
+        df=df,
+        query={"model": ["ACCESS-OM2.*"], "variable": variable},
+        columns_with_iterables=["variable"],
+        name_column="experiment",
+        require_all=True,
+    )
+    matched_experiments = results["experiment"].tolist()
+    assert matched_experiments == [
+        "exp1"
+    ], f"Failed case 1: Expected only exp1, got {matched_experiments}"
+
+    # Now try with all variables as regex
+    variable_regex = [
+        "^tx_trans$",
+        "^ty_trans$",
+        "^mld$",
+        "^area_t$",
+        "^d[hz]t$",
+    ]
+    results_regex = search(
+        df=df,
+        query={"model": ["ACCESS-OM2.*"], "variable": variable_regex},
+        columns_with_iterables=["variable"],
+        name_column="experiment",
+        require_all=True,
+    )
+    matched_experiments_regex = results_regex["experiment"].tolist()
+    assert matched_experiments_regex == [
+        "exp1"
+    ], f"Failed case 2: Expected only exp1, got {matched_experiments_regex}"
