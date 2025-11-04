@@ -1,12 +1,12 @@
 name: intake-df-cat-test
 channels:
   - conda-forge
-  - accessnri
 dependencies:
   - python=3.12
   - black
+  - coverage
   - intake>=0.7
-  - intake-esm-access
+  - intake-esm
   - itables
   - polars>=1.12
   - pytest
