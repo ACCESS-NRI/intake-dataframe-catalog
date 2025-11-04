@@ -53,7 +53,7 @@ jobs:
 
       - name: Run tests
         shell: bash -l {0}
-        run: coverage run -m --source=intake_dataframe_catalog pytest -s . && coverage xml
+        run: python -m pytest -s --cov --cov-report=xml .
 
       - name: Upload code coverage
         uses: codecov/codecov-action@v5

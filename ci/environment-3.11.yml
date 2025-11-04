@@ -5,7 +5,6 @@ channels:
 dependencies:
   - python=3.11
   - black
-  - coverage
   - intake>=0.7
   - intake-esm-access
   - itables
