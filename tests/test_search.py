@@ -7,10 +7,7 @@ import re
 import pandas as pd
 import pytest
 
-from intake_dataframe_catalog._search import (
-    _is_pattern,
-    search,
-)
+from intake_dataframe_catalog._search import _is_pattern, search
 
 
 @pytest.mark.parametrize(
