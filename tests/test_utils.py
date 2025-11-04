@@ -129,3 +129,17 @@ def test_MinimalExploder_double_explode():
     exploded_df = MinimalExploder(df)()
 
     assert_frame_equal(exploded_df, expected_df)
+
+
+def test_MinimalExploder_no_explode():
+    """If there are no list columns, the original dataframe is returned"""
+    df = pl.DataFrame(
+        {
+            "a": [1, 2, 3],
+            "b": ["a", "b", "c"],
+            "c": [True, False, True],
+        }
+    )
+
+    exploded_df = MinimalExploder(df)()
+    assert_frame_equal(exploded_df, df)
