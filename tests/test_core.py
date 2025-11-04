@@ -147,6 +147,44 @@ def test_columns_with_iterables(catalog_path):
     assert "variable" in cat.columns_with_iterables
 
 
+@pytest.mark.parametrize(
+    "fname, format",
+    [
+        ("dfcat.csv", "csv"),
+        ("dfcat.parquet", "parquet"),
+        (None, "in-memory"),
+    ],
+)
+def test_format_valid(catalog_path, fname, format):
+    """
+    Test that format property works as expected.
+    """
+    if fname is not None:
+        path = catalog_path / fname
+    else:
+        path = None
+
+    cat = intake.open_df_catalog(
+        path=path,
+        mode="r",
+    )
+    assert cat.format == format
+
+
+def test_format_invalid(catalog_path):
+    """
+    Test that format property raises error on unsupported format.
+    """
+    path = catalog_path / "dfcat.txt"
+
+    with pytest.raises(DfFileCatalogError) as excinfo:
+        _cat = intake.open_df_catalog(
+            path=path,
+            mode="r",
+        )
+    assert "Unsupported dataframe catalog format" in str(excinfo.value)
+
+
 def test_read_csv_conflict(catalog_path):
     """
     Test that error is raised when `columns_with_iterables` conflicts with `read_csv_kwargs`.
@@ -786,6 +824,7 @@ def _assert_DfFileCatalog(cat, empty=False):
     if empty:
         assert cat.df.empty
         assert len(cat) == 0
+        # assert cat.format == "in-memory"
     else:
         assert not cat.df.empty
         assert len(cat) > 0

@@ -20,6 +20,10 @@ def catalog_path(tmp_path_factory):
 
     shutil.copytree(cat_path, str(tmp_path), dirs_exist_ok=True)
 
+    # Create a temporary file called dfcat.txt in tmp_path
+
+    Path(tmp_path / "dfcat.txt").touch()
+
     return tmp_path
 
 

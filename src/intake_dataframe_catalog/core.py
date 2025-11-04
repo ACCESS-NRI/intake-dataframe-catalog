@@ -173,8 +173,14 @@ class DfFileCatalog(Catalog):
         """
         if self.path is None:
             return "in-memory"
+        if Path(self.path).suffix == ".parquet":
+            return "parquet"
+        elif Path(self.path).suffix == ".csv":
+            return "csv"
         else:
-            return "csv" if Path(self.path).suffix == ".csv" else "parquet"
+            raise DfFileCatalogError(
+                "Unsupported dataframe catalog format. Supported formats are 'in-memory', 'csv', and 'parquet'"
+            )
 
     def __len__(self) -> int:
         return len(self.keys())
