@@ -63,13 +63,9 @@ def search(
     -------
     dataframe: :py:class:`~pandas.DataFrame`
             A new dataframe with the entries satisfying the query criteria.
-
-    @TODO: Cleanup & refactoring needed.
     """
     if not query:
         return df
-    if require_all and len(query.get(name_column, [""])) > 1:
-        return df.head(0)
 
     if isinstance(columns_with_iterables, str):
         columns_with_iterables = [columns_with_iterables]
@@ -95,24 +91,100 @@ def search(
         # If we've specified require all but we don't have any iterable columns
         # in the query we promote the query columns to iterables at this point.
         group_on_names = True
-        iterable_qcols = set(query).intersection(all_cols)
-
-        lf = lf.with_columns(
-            [pl.col(colname).cast(pl.List(pl.Utf8)) for colname in iterable_qcols]
+        (
+            lf,
+            iterable_qcols,
+            columns_with_iterables,
+            cols_to_deiter,
+        ) = _promote_query_qcols(
+            lf, query, columns_with_iterables, all_cols, cols_to_deiter
         )
-        # Keep track of the newly promoted columns & the need to de-iterable them later
-        columns_with_iterables.update(iterable_qcols)
-        cols_to_deiter.update(iterable_qcols)
     else:
         group_on_names = False
 
     lf = lf.with_row_index()
     for column in columns_with_iterables:
+        # N.B: Cannot explode multiple columns together as we need a cartesian product
         lf = lf.explode(column)
 
-    tmp_cols = []
+    lf, tmp_cols = _match_and_filter(lf, query)
+
+    lf = _group_and_filter_on_index(lf, name_column, all_cols, tmp_cols)
+
+    if require_all and iterable_qcols:
+        _agg_cols = set(all_cols).union(set(tmp_cols)) - {name_column}
+        lf = _filter_iter_qcols_on_name(
+            lf, query, name_column, _agg_cols, iterable_qcols, group_on_names
+        )
+
+    lf = lf.select(*all_cols)
+
+    df = lf.explode(list(cols_to_deiter)).collect().to_pandas()
+
+    for col, dtype in iterable_dtypes.items():
+        df[col] = df[col].apply(lambda x: dtype(x))
+
+    return df
+
+
+def _group_and_filter_on_index(
+    lf: pl.LazyFrame,
+    name_column: str,
+    all_cols: list[str],
+    tmp_cols: list[str],
+    /,
+) -> pl.LazyFrame:
+    return (
+        lf.group_by("index")  # Piece the exploded columns back together
+        .agg(
+            [  # Re-aggregate the exploded columns into lists, flatten them out (imploding creates nested lists) and drop duplicates and nulls
+                pl.col(col).flatten().unique(maintain_order=True).drop_nulls()
+                for col in [*all_cols, *tmp_cols]
+            ]
+        )
+        .drop("index")  # We don't need the index anymore
+        .explode(name_column)  # Explode the name column back out so we can select on it
+    )
+
+
+def _promote_query_qcols(
+    lf: pl.LazyFrame,
+    query: dict[str, Any],
+    columns_with_iterables: set[str],
+    all_cols: Collection[str],
+    cols_to_deiter: set[str],
+    /,
+) -> tuple[pl.LazyFrame, set[str], set[str], set[str]]:
+    """
+    Promote query columns to iterable columns in the lazyframe. Positional-only
+    arguments - internal use only.
+
+    Note that this mutates columns and cols_to_deiter in place. We return them
+    explicity for clarity.
+    """
+    iterable_qcols = set(query).intersection(all_cols)
+
+    lf = lf.with_columns(
+        [pl.col(colname).cast(pl.List(pl.Utf8)) for colname in iterable_qcols]
+    )
+    # Keep track of the newly promoted columns & the need to de-iterable them later
+    columns_with_iterables.update(iterable_qcols)
+    cols_to_deiter.update(iterable_qcols)
+
+    return lf, iterable_qcols, columns_with_iterables, cols_to_deiter
+
+
+def _match_and_filter(
+    lf: pl.LazyFrame, query: dict[str, Any], /
+) -> tuple[pl.LazyFrame, list[str]]:
+    """
+    Take a lazyframe and a query dict, and add match columns and filter the lazyframe
+    accordingly. Positional-only arguments - internal use only.
+    """
+    schema = lf.collect_schema()
+
     for colname, subquery in query.items():
-        if lf.collect_schema()[colname] == pl.Utf8 and _is_pattern(subquery):
+        if schema[colname] == pl.Utf8 and _is_pattern(subquery):
             # Build match expressions
             match_exprs = [
                 pl.when(pl.col(colname).str.contains(q)).then(pl.lit(q)).otherwise(None)
@@ -126,9 +198,11 @@ def search(
                 for q in subquery
             ]
 
+        _matchlist = pl.concat_list(match_exprs)
+
         lf = lf.with_columns(
-            pl.when(pl.concat_list(match_exprs).list.drop_nulls().list.len() > 0)
-            .then(pl.concat_list(match_exprs))
+            pl.when(_matchlist.list.drop_nulls().list.len() > 0)
+            .then(_matchlist)
             .otherwise(
                 None
             )  # This whole when-then-otherwise is to map empty lists to null
@@ -136,53 +210,50 @@ def search(
         )
 
         lf = lf.filter(pl.col(f"{colname}_matches").is_not_null())
-        tmp_cols.append(f"{colname}_matches")
 
-    lf = (
-        lf.group_by("index")  # Piece the exploded columns back together
-        .agg(
-            [  # Re-aggregate the exploded columns into lists, flatten them out (imploding creates nested lists) and drop duplicates and nulls
-                pl.col(col).implode().flatten().unique(maintain_order=True).drop_nulls()
-                for col in [*all_cols, *tmp_cols]
+    tmp_cols = [f"{colname}_matches" for colname in query.keys()]
+    return lf, tmp_cols
+
+
+def _filter_iter_qcols_on_name(
+    lf: pl.LazyFrame,
+    query: dict[str, Any],
+    name_column: str,
+    agg_cols: set[str],
+    iterable_qcols: set[str],
+    group_on_names: bool,
+    /,
+) -> pl.LazyFrame:
+    """
+    Takes a lazyframe and filters it to only those names that match all
+    elements in the query for the specified iterable query columns. Positional
+    -only arguments - internal use only.
+
+    Only ever called if require_all is True.
+    """
+    if group_on_names:
+        # Group by name_column and aggregate the other columns into lists
+        # first in this instance. Essentially the opposite of the previous
+        # group_by("index") operation.
+        namelist_lf = lf.group_by(name_column).agg(
+            [
+                pl.col(col).explode().flatten().unique(maintain_order=True)
+                for col in agg_cols
             ]
         )
-        .drop("index")  # We don't need the index anymore
-        .explode(name_column)  # Explode the name column back out so we can select on it
-    )
+    else:
+        namelist_lf = lf
 
-    if require_all and iterable_qcols:
-        if group_on_names:
-            # Group by name_column and aggregate the other columns into lists
-            # first in this instance. Essentially the opposite of the previous
-            # group_by("index") operation.
-            namelist_lf = lf.group_by(name_column).agg(
-                [
-                    pl.col(col).explode().flatten().unique(maintain_order=True)
-                    for col in (set(all_cols).union(set(tmp_cols)) - {name_column})
-                ]
-            )
-        else:
-            namelist_lf = lf
-
-        namelist = (
-            namelist_lf.filter(
-                [
-                    pl.col(f"{colname}_matches").list.drop_nulls().list.len()
-                    >= len(query[colname])
-                    for colname in iterable_qcols
-                ]
-            )
-            .select(name_column)
-            .collect()
-            .to_series()
+    namelist = (
+        namelist_lf.filter(
+            [
+                pl.col(f"{colname}_matches").list.drop_nulls().list.len()
+                >= len(query[colname])
+                for colname in iterable_qcols
+            ]
         )
-        lf = lf.filter(pl.col(name_column).is_in(namelist))
-
-    lf = lf.select(*all_cols)
-
-    df = lf.explode(list(cols_to_deiter)).collect().to_pandas()
-
-    for col, dtype in iterable_dtypes.items():
-        df[col] = df[col].apply(lambda x: dtype(x))
-
-    return df
+        .select(name_column)
+        .collect()
+        .to_series()
+    )
+    return lf.filter(pl.col(name_column).is_in(namelist))
