@@ -10,6 +10,7 @@ from typing import Any, Optional
 import fsspec
 import intake
 import itables
+import numpy as np
 import pandas as pd
 import polars as pl
 import tlz
@@ -718,6 +719,6 @@ def _columns_with_iterables(df: pd.DataFrame, sample: bool = False) -> list[str]
 
     _df = df.sample(20, replace=True) if sample else df
 
-    has_iterables = _df.map(type).isin([list, tuple, set]).any().to_dict()
+    has_iterables = _df.map(type).isin([list, tuple, set, np.ndarray]).any().to_dict()
 
     return [col for col, check in has_iterables.items() if check]
