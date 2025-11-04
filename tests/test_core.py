@@ -515,7 +515,7 @@ def test_catalog_getitem(catalog_path, key, expected):
         {},
     ],
 )
-def test_catalog_save(catalog_path, method, kwargs):
+def test_catalog_save_csv(catalog_path, method, kwargs):
     """
     Test saving catalogs
     """
@@ -548,6 +548,60 @@ def test_catalog_save(catalog_path, method, kwargs):
         str(catalog_path / "tmp.csv"),
         columns_with_iterables=["variable"],
         read_kwargs=kwargs,
+    )
+    pd.testing.assert_frame_equal(
+        cat_subset.df.reset_index(drop=True),
+        cat_subset_reread.df.reset_index(drop=True),
+    )
+
+
+@pytest.mark.parametrize(
+    "method",
+    ["save", "serialize"],
+)
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"compression": {"method": "snappy"}},
+        {},
+    ],
+)
+def test_catalog_save_parquet(catalog_path, method, kwargs):
+    """
+    Test saving catalogs
+    """
+    read_kwargs = kwargs.copy()
+    read_kwargs.pop("compression", None)
+
+    path = str(catalog_path / "dfcat.parquet")
+    cat = intake.open_df_catalog(
+        path=path,
+        columns_with_iterables=["variable"],
+        mode="a",
+    )
+
+    # Resave or overwrite
+    if kwargs:
+        path = str(catalog_path / "tmp.parquet")
+        getattr(cat, method)(path=path, **kwargs)
+    else:
+        getattr(cat, method)()
+    cat_reread = intake.open_df_catalog(
+        path=path,
+        columns_with_iterables=["variable"],
+        read_kwargs=read_kwargs,
+    )
+    pd.testing.assert_frame_equal(
+        cat.df.reset_index(drop=True), cat_reread.df.reset_index(drop=True)
+    )
+
+    # Save new
+    cat_subset = cat.search(variable="tas")
+    getattr(cat_subset, method)(path=str(catalog_path / "tmp.parquet"), **kwargs)
+    cat_subset_reread = intake.open_df_catalog(
+        str(catalog_path / "tmp.parquet"),
+        columns_with_iterables=["variable"],
+        read_kwargs=read_kwargs,
     )
     pd.testing.assert_frame_equal(
         cat_subset.df.reset_index(drop=True),

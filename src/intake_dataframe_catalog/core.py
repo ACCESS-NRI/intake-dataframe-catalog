@@ -486,12 +486,7 @@ class DfFileCatalog(Catalog):
 
         save_path = path if path else self.path
 
-        if save_path is None:
-            raise ValueError(
-                "No path provided to save the dataframe catalog. Please provide a path via the 'path' argument."
-            )
-
-        format = "csv" if Path(save_path).suffix == ".csv" else "parquet"
+        format = "csv" if Path(save_path).suffix == ".csv" else "parquet"  # type: ignore[arg-type]
 
         if self._allow_write:
             mapper = fsspec.get_mapper(
