@@ -8,6 +8,7 @@ dependencies:
   - intake>=0.7
   - intake-esm-access
   - itables
+  - mypy
   - polars>=1.12
   - pytest
   - pip
