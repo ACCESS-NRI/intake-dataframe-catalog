@@ -878,7 +878,6 @@ def _assert_DfFileCatalog(cat, empty=False):
     if empty:
         assert cat.df.empty
         assert len(cat) == 0
-        # assert cat.format == "in-memory"
     else:
         assert not cat.df.empty
         assert len(cat) > 0

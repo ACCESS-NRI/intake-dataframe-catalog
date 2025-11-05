@@ -84,7 +84,6 @@ def search(
         if dtype == ndarray:
             iterable_dtypes[colname] = tuple
 
-    # Returns an empty list if no rows - hence walrus
     columns_with_iterables = set(columns_with_iterables)
     iterable_qcols = columns_with_iterables.intersection(query)
     cols_to_deiter = set(all_cols).difference(columns_with_iterables, {name_column})
