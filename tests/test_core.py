@@ -23,11 +23,15 @@ from intake_dataframe_catalog.core import DfFileCatalog, DfFileCatalogError
         {"columns_with_iterables": "variable"},
     ],
 )
-def test_load(catalog_path, mode, kwargs):
+@pytest.mark.parametrize(
+    "fname",
+    ["dfcat.csv", "dfcat.parquet"],
+)
+def test_load(catalog_path, mode, kwargs, fname):
     """
     Test loading catalog from a file
     """
-    path = catalog_path / "dfcat.csv"
+    path = catalog_path / fname
 
     cat = intake.open_df_catalog(path=str(path), mode=mode, **kwargs)
 
@@ -141,6 +145,44 @@ def test_columns_with_iterables(catalog_path):
         for v in cat.df.variable
     )
     assert "variable" in cat.columns_with_iterables
+
+
+@pytest.mark.parametrize(
+    "fname, format",
+    [
+        ("dfcat.csv", "csv"),
+        ("dfcat.parquet", "parquet"),
+        (None, "in-memory"),
+    ],
+)
+def test_format_valid(catalog_path, fname, format):
+    """
+    Test that format property works as expected.
+    """
+    if fname is not None:
+        path = catalog_path / fname
+    else:
+        path = None
+
+    cat = intake.open_df_catalog(
+        path=path,
+        mode="r",
+    )
+    assert cat.format == format
+
+
+def test_format_invalid(catalog_path):
+    """
+    Test that format property raises error on unsupported format.
+    """
+    path = catalog_path / "dfcat.txt"
+
+    with pytest.raises(DfFileCatalogError) as excinfo:
+        _cat = intake.open_df_catalog(
+            path=path,
+            mode="r",
+        )
+    assert "Unsupported dataframe catalog format" in str(excinfo.value)
 
 
 def test_read_csv_conflict(catalog_path):
@@ -473,7 +515,7 @@ def test_catalog_getitem(catalog_path, key, expected):
         {},
     ],
 )
-def test_catalog_save(catalog_path, method, kwargs):
+def test_catalog_save_csv(catalog_path, method, kwargs):
     """
     Test saving catalogs
     """
@@ -506,6 +548,60 @@ def test_catalog_save(catalog_path, method, kwargs):
         str(catalog_path / "tmp.csv"),
         columns_with_iterables=["variable"],
         read_kwargs=kwargs,
+    )
+    pd.testing.assert_frame_equal(
+        cat_subset.df.reset_index(drop=True),
+        cat_subset_reread.df.reset_index(drop=True),
+    )
+
+
+@pytest.mark.parametrize(
+    "method",
+    ["save", "serialize"],
+)
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"compression": {"method": "snappy"}},
+        {},
+    ],
+)
+def test_catalog_save_parquet(catalog_path, method, kwargs):
+    """
+    Test saving catalogs
+    """
+    read_kwargs = kwargs.copy()
+    read_kwargs.pop("compression", None)
+
+    path = str(catalog_path / "dfcat.parquet")
+    cat = intake.open_df_catalog(
+        path=path,
+        columns_with_iterables=["variable"],
+        mode="a",
+    )
+
+    # Resave or overwrite
+    if kwargs:
+        path = str(catalog_path / "tmp.parquet")
+        getattr(cat, method)(path=path, **kwargs)
+    else:
+        getattr(cat, method)()
+    cat_reread = intake.open_df_catalog(
+        path=path,
+        columns_with_iterables=["variable"],
+        read_kwargs=read_kwargs,
+    )
+    pd.testing.assert_frame_equal(
+        cat.df.reset_index(drop=True), cat_reread.df.reset_index(drop=True)
+    )
+
+    # Save new
+    cat_subset = cat.search(variable="tas")
+    getattr(cat_subset, method)(path=str(catalog_path / "tmp.parquet"), **kwargs)
+    cat_subset_reread = intake.open_df_catalog(
+        str(catalog_path / "tmp.parquet"),
+        columns_with_iterables=["variable"],
+        read_kwargs=read_kwargs,
     )
     pd.testing.assert_frame_equal(
         cat_subset.df.reset_index(drop=True),

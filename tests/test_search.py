@@ -449,3 +449,35 @@ def test_search_variable_regex_and_exact():
     assert matched_experiments_regex == [
         "exp1"
     ], f"Failed case 2: Expected only exp1, got {matched_experiments_regex}"
+
+
+@pytest.mark.parametrize(
+    "query, require_all, expected",
+    [
+        (
+            {"B": ["a", "b"]},
+            False,
+            [
+                {"A": "cat0", "B": ["a", "b"], "E": "xxx"},
+                {"A": "cat1", "B": ["a", "b"], "E": "xxx"},
+                {"A": "cat1", "B": ["a"], "E": "yyy"},
+            ],
+        ),
+    ],
+)
+def test_search_columns_with_iterables_as_str(query, require_all, expected):
+    df = pd.DataFrame(
+        {
+            "A": ["cat0", "cat1", "cat1"],
+            "B": [["a", "b"], ["a", "b", "c"], ["c", "d", "a"]],
+            "E": ["xxx", "xxx", "yyy"],
+        }
+    )
+    results = search(
+        df=df,
+        query=query,
+        columns_with_iterables="B",
+        name_column="A",
+        require_all=require_all,
+    ).to_dict(orient="records")
+    assert results == expected

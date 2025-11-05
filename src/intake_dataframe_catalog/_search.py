@@ -9,6 +9,7 @@ from typing import Any, Union
 
 import pandas as pd
 import polars as pl
+from numpy import ndarray
 
 
 def _is_pattern(input: Union[str, Pattern, Collection]) -> bool:
@@ -78,6 +79,11 @@ def search(
     iterable_dtypes = {
         colname: type(df[colname].iloc[0]) for colname in columns_with_iterables
     }
+
+    for colname, dtype in iterable_dtypes.items():
+        if dtype == ndarray:
+            iterable_dtypes[colname] = tuple
+
     columns_with_iterables = set(columns_with_iterables)
     iterable_qcols = columns_with_iterables.intersection(query)
     cols_to_deiter = set(all_cols).difference(columns_with_iterables, {name_column})

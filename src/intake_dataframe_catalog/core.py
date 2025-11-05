@@ -4,12 +4,13 @@
 import ast
 import warnings
 from io import UnsupportedOperation
-from pathlib import PosixPath
+from pathlib import Path, PosixPath
 from typing import Any, Optional
 
 import fsspec
 import intake
 import itables
+import numpy as np
 import pandas as pd
 import polars as pl
 import tlz
@@ -146,7 +147,12 @@ class DfFileCatalog(Catalog):
                     # self._df.to_csv(fobj)
             else:
                 with fsspec.open(self.path, **self.storage_options) as fobj:
-                    self._df = pd.read_csv(fobj, **self._read_kwargs)
+                    if self.format == "csv":
+                        self._df = pd.read_csv(fobj, **self._read_kwargs)
+                    elif self.format == "parquet":
+                        read_kwargs = self._read_kwargs.copy()
+                        read_kwargs.pop("converters", None)
+                        self._df = pd.read_parquet(fobj, **read_kwargs)
                 if self.yaml_column not in self.df.columns:
                     raise DfFileCatalogError(
                         f"'{self.yaml_column}' is not a column in the dataframe catalog. Please provide "
@@ -159,6 +165,22 @@ class DfFileCatalog(Catalog):
                         "the name of the column containing the intake source names via argument "
                         "`name_column`."
                     )
+
+    @property
+    def format(self) -> str:
+        """
+        Return the format of the dataframe catalog file - csv or parquet
+        """
+        if self.path is None:
+            return "in-memory"
+        if Path(self.path).suffix == ".parquet":
+            return "parquet"
+        elif Path(self.path).suffix == ".csv":
+            return "csv"
+        else:
+            raise DfFileCatalogError(
+                "Unsupported dataframe catalog format. Supported formats are 'in-memory', 'csv', and 'parquet'"
+            )
 
     def __len__(self) -> int:
         return len(self.keys())
@@ -252,7 +274,7 @@ class DfFileCatalog(Catalog):
             return {col: [] for col in self.columns}
         else:
             return self.df.apply(
-                lambda x: list(_find_unique(x, self.columns_with_iterables)),
+                lambda x: list(_find_unique(x)),
                 result_type="reduce",
             ).to_dict()
 
@@ -464,6 +486,8 @@ class DfFileCatalog(Catalog):
 
         save_path = path if path else self.path
 
+        format = "csv" if Path(save_path).suffix == ".csv" else "parquet"  # type: ignore[arg-type]
+
         if self._allow_write:
             mapper = fsspec.get_mapper(
                 f"{save_path}", storage_options=self.storage_options
@@ -471,11 +495,15 @@ class DfFileCatalog(Catalog):
             fs = mapper.fs
             fname = fs.unstrip_protocol(save_path)
 
-            csv_kwargs: dict[str, Any] = {"index": False}
-            csv_kwargs.update(kwargs.copy() or {})
+            writer_kwargs: dict[str, Any] = {"index": False}
+            writer_kwargs.update(kwargs.copy() or {})
 
-            with fs.open(fname, "wb") as fobj:
-                self.df.to_csv(fobj, **csv_kwargs)
+            if format == "csv":
+                with fs.open(fname, "wb") as fobj:
+                    self.df.to_csv(fobj, **writer_kwargs)
+            elif format == "parquet":
+                with fs.open(fname, "wb") as fobj:
+                    self.df.to_parquet(fobj, **writer_kwargs)
         else:
             raise UnsupportedOperation(
                 f"Cannot save catalog initialised with mode='{self.mode}'"
@@ -665,7 +693,7 @@ class DfFileCatalog(Catalog):
         elif self._df_summary is None:
             self._df_summary = self.df.groupby(self.name_column).agg(
                 {
-                    col: lambda x: _find_unique(x, self.columns_with_iterables)
+                    col: lambda x: _find_unique(x)
                     for col in self.df.columns.drop(
                         [self.name_column, self.yaml_column]
                     )
@@ -675,14 +703,13 @@ class DfFileCatalog(Catalog):
         return self._df_summary
 
 
-def _find_unique(series: pd.Series, columns_with_iterables: list[str]) -> set[str]:
+def _find_unique(series: pd.Series) -> set[str]:
     """
-    Return a set of unique values in a series
+    Return a set of unique values in a series.
+
+    Type ignore necessary as mypy cannot infer series in here => polars series out correctly
     """
-    values = series.dropna()
-    if series.name in columns_with_iterables:
-        values = tlz.concat(values)
-    return set(values)
+    return set(pl.from_pandas(series).explode().unique().drop_nulls())  # type: ignore
 
 
 def _columns_with_iterables(df: pd.DataFrame, sample: bool = False) -> list[str]:
@@ -693,6 +720,6 @@ def _columns_with_iterables(df: pd.DataFrame, sample: bool = False) -> list[str]
 
     _df = df.sample(20, replace=True) if sample else df
 
-    has_iterables = _df.map(type).isin([list, tuple, set]).any().to_dict()
+    has_iterables = _df.map(type).isin([list, tuple, set, np.ndarray]).any().to_dict()
 
     return [col for col, check in has_iterables.items() if check]
