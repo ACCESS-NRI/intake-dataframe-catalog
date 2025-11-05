@@ -21,13 +21,6 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[project.optional-dependencies]
-test = [
-    "pytest",
-    "pytest-cov",
-    "tox",
-]
-
 [project.entry-points."intake.drivers"]
 df_catalog = "intake_dataframe_catalog.core:DfFileCatalog"
 
@@ -131,6 +124,14 @@ pytest = ">=8.4.1,<9"
 pytest-cov = ">=7.0.0,<8"
 xarray = ">=2025.6.1,<2026"
 intake-esm-access = { version = ">=2025.10.14,<2026", channel = "accessnri" }
+
+[tool.pixi.feature.dev.tasks]
+pre-commit-install = { cmd = "pre-commit install", description = "Install pre-commit hooks" }
+dump-conda-env = { cmd = "pixi workspace export conda-environment --name intake-dfcat-test > env.yml", description = "Dump conda environment to env.yml" }
+
+[tool.pixi.feature.dev.dependencies]
+pytest = ">=8.4.2,<9"
+pytest-cov = ">=7.0.0,<8"
 
 [tool.pixi.feature.py310.dependencies]
 python = "3.10.*"
