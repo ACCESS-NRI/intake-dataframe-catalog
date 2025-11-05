@@ -63,6 +63,8 @@ def search(
     -------
     dataframe: :py:class:`~pandas.DataFrame`
             A new dataframe with the entries satisfying the query criteria.
+
+    @TODO: Cleanup & refactoring needed.
     """
     if not query:
         return df
