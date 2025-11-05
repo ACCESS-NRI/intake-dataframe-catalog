@@ -131,3 +131,6 @@ dmypy.json
 # Files
 sandpit.ipynb
 .DS_Store
+# pixi environments
+.pixi/*
+!.pixi/config.toml

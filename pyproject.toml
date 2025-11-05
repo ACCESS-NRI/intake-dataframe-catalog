@@ -17,7 +17,7 @@ dependencies = [
     "intake >= 0.7.0",
     "itables",
     "pandas",
-    "polars>=1.12,<1.33"
+    "polars>=1.12"
 ]
 dynamic = ["version"]
 
@@ -105,3 +105,41 @@ max-complexity = 18
 [tool.ruff.isort]
 known-first-party = ["intake_dataframe_catalog"]
 
+[tool.pixi.workspace]
+channels = ["conda-forge","accessnri"]
+platforms = ["osx-arm64", "linux-64", "win-64"]
+
+[tool.pixi.environments]
+default = { features = ["dev","py313"], solve-group = "default" }
+test-py310 = { features = ["py310", "test"] }
+test-py311 = { features = ["py311", "test"] }
+test-py312 = { features = ["py312", "test"] }
+test-py313 = { features = ["py313", "test"] }
+
+[tool.pixi.feature.dev.pypi-dependencies]
+intake_dataframe_catalog = { path = ".", editable = true }
+
+[tool.pixi.feature.test.pypi-dependencies]
+intake_dataframe_catalog = { path = ".", editable = false }
+
+[tool.pixi.feature.test.tasks]
+test = {cmd = "pytest tests", description = "Run tests"}
+test-cov = {cmd = "pytest -s --cov=intake_dataframe_catalog --cov-report=xml tests && coverage xml", description = "Run tests with coverage and generate xml report"}
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=8.4.1,<9"
+pytest-cov = ">=7.0.0,<8"
+xarray = ">=2025.6.1,<2026"
+intake-esm-access = { version = ">=2025.10.14,<2026", channel = "accessnri" }
+
+[tool.pixi.feature.py310.dependencies]
+python = "3.10.*"
+
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
+[tool.pixi.feature.py313.dependencies]
+python = "3.13.*"
