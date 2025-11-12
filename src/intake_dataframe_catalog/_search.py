@@ -109,7 +109,6 @@ def search(
         lf = lf.explode(column)
 
     lf, tmp_cols = _match_and_filter(lf, query)
-
     lf = _group_and_filter_on_index(lf, name_column, all_cols, tmp_cols)
 
     if require_all and iterable_qcols:
@@ -181,11 +180,15 @@ def _match_and_filter(
     """
     Take a lazyframe and a query dict, and add match columns and filter the lazyframe
     accordingly. Positional-only arguments - internal use only.
+
+    Note here we put our *query* into the match column, as we need to match on
+    all *queries*, not all *matches*.
     """
     schema = lf.collect_schema()
 
     for colname, subquery in query.items():
         if schema[colname] == pl.Utf8 and _is_pattern(subquery):
+            subquery = [q if _is_pattern(q) else f"^{q}$" for q in subquery]
             # Build match expressions
             match_exprs = [
                 pl.when(pl.col(colname).str.contains(q)).then(pl.lit(q)).otherwise(None)
@@ -232,7 +235,7 @@ def _filter_iter_qcols_on_name(
 
     Only ever called if require_all is True.
     """
-    if group_on_names:
+    if True:
         # Group by name_column and aggregate the other columns into lists
         # first in this instance. Essentially the opposite of the previous
         # group_by("index") operation.
