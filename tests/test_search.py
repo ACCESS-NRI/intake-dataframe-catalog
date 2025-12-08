@@ -233,133 +233,193 @@ def test_search(query, expected):
     "query, require_all, expected",
     [
         (
-            {"B": ["a", "b"], "D": [0]},
-            False,
-            [
-                {"A": "cat0", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0}, "E": "xxx"},
-                {"A": "cat1", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}, "E": "xxx"},
-                {"A": "cat1", "B": ["a"], "C": ("cz", "cy"), "D": {0}, "E": "yyy"},
-            ],
-        ),
-        (
-            {"B": ["a", "b"], "D": [0, 1]},
+            {"model": ["a", "b"], "variable": [0]},
             False,
             [
                 {
-                    "A": "cat0",
-                    "B": ["a", "b"],
-                    "C": ("cx", "cy"),
-                    "D": {0, 1},
-                    "E": "xxx",
-                },
-                {"A": "cat1", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}, "E": "xxx"},
-                {"A": "cat1", "B": ["a"], "C": ("cz", "cy"), "D": {0, 1}, "E": "yyy"},
-            ],
-        ),
-        (
-            {"B": ["a", "b"], "D": [0]},
-            True,
-            [
-                {"A": "cat0", "B": ["a", "b"], "C": ("cx", "cy"), "D": {0}, "E": "xxx"},
-                {"A": "cat1", "B": ["a", "b"], "C": ("cx", "cz"), "D": {0}, "E": "xxx"},
-                {"A": "cat1", "B": ["a"], "C": ("cz", "cy"), "D": {0}, "E": "yyy"},
-            ],
-        ),
-        (
-            {"B": ["a", "b"], "D": [0, 1]},
-            True,
-            [
-                {
-                    "A": "cat0",
-                    "B": ["a", "b"],
-                    "C": ("cx", "cy"),
-                    "D": {0, 1},
-                    "E": "xxx",
-                },
-            ],
-        ),
-        (
-            {"C": ["cx", "cy"], "E": ["xxx"]},
-            False,
-            [
-                {
-                    "A": "cat0",
-                    "B": ["a", "b"],
-                    "C": ("cx", "cy"),
-                    "D": {0, 1},
+                    "name": "cat0",
+                    "model": ["a", "b"],
+                    "realm": ("cx", "cy"),
+                    "variable": {0},
                     "E": "xxx",
                 },
                 {
-                    "A": "cat1",
-                    "B": ["a", "b", "c"],
-                    "C": ("cx",),
-                    "D": {0, 2},
-                    "E": "xxx",
-                },
-            ],
-        ),
-        (
-            {"C": ["cx", "cy"], "E": ["xxx"]},
-            True,
-            [
-                {
-                    "A": "cat0",
-                    "B": ["a", "b"],
-                    "C": ("cx", "cy"),
-                    "D": {0, 1},
-                    "E": "xxx",
-                },
-            ],
-        ),
-        (
-            {"A": ["cat1"], "B": ["c"], "C": ["cz"], "D": [2]},
-            True,
-            [
-                {"A": "cat1", "B": ["c"], "C": ("cz",), "D": {2}, "E": "xxx"},
-            ],
-        ),
-        (
-            {"A": ["cat1"], "B": ["c"], "C": ["cx"], "D": [1]},
-            True,
-            [],
-        ),
-        (
-            {"A": ["cat.*"], "B": ["a", "c"], "C": ["c.*"]},
-            False,
-            [
-                {"A": "cat0", "B": ["a"], "C": ("cx", "cy"), "D": {0, 1}, "E": "xxx"},
-                {
-                    "A": "cat1",
-                    "B": ["a", "c"],
-                    "C": ("cx", "cz"),
-                    "D": {0, 2},
+                    "name": "cat1",
+                    "model": ["a", "b"],
+                    "realm": ("cx", "cz"),
+                    "variable": {0},
                     "E": "xxx",
                 },
                 {
-                    "A": "cat1",
-                    "B": ["c", "a"],
-                    "C": ("cz", "cy"),
-                    "D": {0, 1},
+                    "name": "cat1",
+                    "model": ["a"],
+                    "realm": ("cz", "cy"),
+                    "variable": {0},
                     "E": "yyy",
                 },
             ],
         ),
         (
-            {"A": ["cat.*"], "B": ["a", "c"], "C": ["c.*"]},
-            True,
+            {"model": ["a", "b"], "variable": [0, 1]},
+            False,
             [
                 {
-                    "A": "cat1",
-                    "B": ["a", "c"],
-                    "C": ("cx", "cz"),
-                    "D": {0, 2},
+                    "name": "cat0",
+                    "model": ["a", "b"],
+                    "realm": ("cx", "cy"),
+                    "variable": {0, 1},
                     "E": "xxx",
                 },
                 {
-                    "A": "cat1",
-                    "B": ["c", "a"],
-                    "C": ("cz", "cy"),
-                    "D": {0, 1},
+                    "name": "cat1",
+                    "model": ["a", "b"],
+                    "realm": ("cx", "cz"),
+                    "variable": {0},
+                    "E": "xxx",
+                },
+                {
+                    "name": "cat1",
+                    "model": ["a"],
+                    "realm": ("cz", "cy"),
+                    "variable": {0, 1},
+                    "E": "yyy",
+                },
+            ],
+        ),
+        (
+            {"model": ["a", "b"], "variable": [0]},
+            True,
+            [
+                {
+                    "name": "cat0",
+                    "model": ["a", "b"],
+                    "realm": ("cx", "cy"),
+                    "variable": {0},
+                    "E": "xxx",
+                },
+                {
+                    "name": "cat1",
+                    "model": ["a", "b"],
+                    "realm": ("cx", "cz"),
+                    "variable": {0},
+                    "E": "xxx",
+                },
+                {
+                    "name": "cat1",
+                    "model": ["a"],
+                    "realm": ("cz", "cy"),
+                    "variable": {0},
+                    "E": "yyy",
+                },
+            ],
+        ),
+        (
+            {"model": ["a", "b"], "variable": [0, 1]},
+            True,
+            [
+                {
+                    "name": "cat0",
+                    "model": ["a", "b"],
+                    "realm": ("cx", "cy"),
+                    "variable": {0, 1},
+                    "E": "xxx",
+                },
+            ],
+        ),
+        (
+            {"realm": ["cx", "cy"], "E": ["xxx"]},
+            False,
+            [
+                {
+                    "name": "cat0",
+                    "model": ["a", "b"],
+                    "realm": ("cx", "cy"),
+                    "variable": {0, 1},
+                    "E": "xxx",
+                },
+                {
+                    "name": "cat1",
+                    "model": ["a", "b", "c"],
+                    "realm": ("cx",),
+                    "variable": {0, 2},
+                    "E": "xxx",
+                },
+            ],
+        ),
+        (
+            {"realm": ["cx", "cy"], "E": ["xxx"]},
+            True,
+            [
+                {
+                    "name": "cat0",
+                    "model": ["a", "b"],
+                    "realm": ("cx", "cy"),
+                    "variable": {0, 1},
+                    "E": "xxx",
+                },
+            ],
+        ),
+        (
+            {"name": ["cat1"], "model": ["c"], "realm": ["cz"], "variable": [2]},
+            True,
+            [
+                {
+                    "name": "cat1",
+                    "model": ["c"],
+                    "realm": ("cz",),
+                    "variable": {2},
+                    "E": "xxx",
+                },
+            ],
+        ),
+        (
+            {"name": ["cat1"], "model": ["c"], "realm": ["cx"], "variable": [1]},
+            True,
+            [],
+        ),
+        (
+            {"name": ["cat.*"], "model": ["a", "c"], "realm": ["c.*"]},
+            False,
+            [
+                {
+                    "name": "cat0",
+                    "model": ["a"],
+                    "realm": ("cx", "cy"),
+                    "variable": {0, 1},
+                    "E": "xxx",
+                },
+                {
+                    "name": "cat1",
+                    "model": ["a", "c"],
+                    "realm": ("cx", "cz"),
+                    "variable": {0, 2},
+                    "E": "xxx",
+                },
+                {
+                    "name": "cat1",
+                    "model": ["c", "a"],
+                    "realm": ("cz", "cy"),
+                    "variable": {0, 1},
+                    "E": "yyy",
+                },
+            ],
+        ),
+        (
+            {"name": ["cat.*"], "model": ["a", "c"], "realm": ["c.*"]},
+            True,
+            [
+                {
+                    "name": "cat1",
+                    "model": ["a", "c"],
+                    "realm": ("cx", "cz"),
+                    "variable": {0, 2},
+                    "E": "xxx",
+                },
+                {
+                    "name": "cat1",
+                    "model": ["c", "a"],
+                    "realm": ("cz", "cy"),
+                    "variable": {0, 1},
                     "E": "yyy",
                 },
             ],
@@ -367,23 +427,35 @@ def test_search(query, expected):
     ],
 )
 def test_search_columns_with_iterables(query, require_all, expected):
+    """
+    We use more descriptive names here for our iterable columns to avoid accidentally
+    testing meaningless cartesian product expansion cases.
+    """
     df = pd.DataFrame(
         {
-            "A": ["cat0", "cat1", "cat1"],
-            "B": [["a", "b"], ["a", "b", "c"], ["c", "d", "a"]],
-            "C": [("cx", "cy"), ("cx", "cz"), ("cz", "cy")],
-            "D": [{0, 1}, {0, 2}, {0, 1}],
+            "name": ["cat0", "cat1", "cat1"],
+            "model": [["a", "b"], ["a", "b", "c"], ["c", "d", "a"]],
+            "realm": [("cx", "cy"), ("cx", "cz"), ("cz", "cy")],
+            "variable": [{0, 1}, {0, 2}, {0, 1}],
             "E": ["xxx", "xxx", "yyy"],
         }
     )
     results = search(
         df=df,
         query=query,
-        columns_with_iterables=["B", "C", "D"],
-        name_column="A",
+        columns_with_iterables=["model", "realm", "variable"],
+        name_column="name",
         require_all=require_all,
     ).to_dict(orient="records")
-    assert results == expected
+
+    match = results == expected
+    if match:
+        assert True
+    if not match:
+        breakpoint()
+        assert (
+            False
+        ), f"Expected: \n{pd.DataFrame(expected)} \nFound: \n{pd.DataFrame(results)}"
 
 
 def test_search_variable_regex_and_exact():
