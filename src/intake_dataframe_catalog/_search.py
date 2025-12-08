@@ -234,6 +234,9 @@ def _filter_iter_qcols_on_name(
     -only arguments - internal use only.
 
     Only ever called if require_all is True.
+
+    TODO: I think we need to do the counting *before * we* aggregate, otherwise
+    we might count matches that are in different rows as being together. Need to test this.
     """
     if True:
         # Group by name_column and aggregate the other columns into lists
