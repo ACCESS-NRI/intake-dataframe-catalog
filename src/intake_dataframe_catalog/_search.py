@@ -66,6 +66,7 @@ def search(
 
     @TODO: Cleanup & refactoring needed.
     """
+
     if not query:
         return df
 
@@ -91,17 +92,16 @@ def search(
     if require_all and not iterable_qcols:
         # If we've specified require all but we don't have any iterable columns
         # in the query we promote the query columns to iterables at this point.
-        group_on_names = True
         (
             lf,
-            iterable_qcols,
+            iterable_qcols_tmp,
             columns_with_iterables,
             cols_to_deiter,
         ) = _promote_query_qcols(
             lf, query, columns_with_iterables, all_cols, cols_to_deiter
         )
     else:
-        group_on_names = False
+        iterable_qcols_tmp = iterable_qcols.copy()
 
     lf = lf.with_row_index()
     for column in columns_with_iterables:
@@ -111,10 +111,15 @@ def search(
     lf, tmp_cols = _match_and_filter(lf, query)
     lf = _group_and_filter_on_index(lf, name_column, all_cols, tmp_cols)
 
-    if require_all and iterable_qcols:
+    if require_all and iterable_qcols_tmp:
         _agg_cols = set(all_cols).union(set(tmp_cols)) - {name_column}
         lf = _filter_iter_qcols_on_name(
-            lf, query, name_column, _agg_cols, iterable_qcols, group_on_names
+            lf,
+            query,
+            name_column,
+            _agg_cols,
+            iterable_qcols_tmp,
+            iterable_qcols,
         )
 
     lf = lf.select(*all_cols)
@@ -159,19 +164,19 @@ def _promote_query_qcols(
     Promote query columns to iterable columns in the lazyframe. Positional-only
     arguments - internal use only.
 
-    Note that this mutates columns and cols_to_deiter in place. We return them
-    explicity for clarity.
     """
     iterable_qcols = set(query).intersection(all_cols)
 
     lf = lf.with_columns(
         [pl.col(colname).cast(pl.List(pl.Utf8)) for colname in iterable_qcols]
     )
+    _columns_with_iterables = columns_with_iterables.copy()
+    _cols_to_deiter = cols_to_deiter.copy()
     # Keep track of the newly promoted columns & the need to de-iterable them later
-    columns_with_iterables.update(iterable_qcols)
-    cols_to_deiter.update(iterable_qcols)
+    _columns_with_iterables.update(iterable_qcols)
+    _cols_to_deiter.update(iterable_qcols)
 
-    return lf, iterable_qcols, columns_with_iterables, cols_to_deiter
+    return lf, iterable_qcols, _columns_with_iterables, _cols_to_deiter
 
 
 def _match_and_filter(
@@ -224,21 +229,24 @@ def _filter_iter_qcols_on_name(
     query: dict[str, Any],
     name_column: str,
     agg_cols: set[str],
+    iterable_qcols_tmp: set[str],
     iterable_qcols: set[str],
-    group_on_names: bool,
     /,
 ) -> pl.LazyFrame:
     """
+    Only ever called if require_all is True.
+
     Takes a lazyframe and filters it to only those names that match all
     elements in the query for the specified iterable query columns. Positional
     -only arguments - internal use only.
 
-    Only ever called if require_all is True.
-
     TODO: I think we need to do the counting *before * we* aggregate, otherwise
     we might count matches that are in different rows as being together. Need to test this.
     """
-    if True:
+    group_on_names = not iterable_qcols
+
+    if group_on_names:
+        # if True:
         # Group by name_column and aggregate the other columns into lists
         # first in this instance. Essentially the opposite of the previous
         # group_by("index") operation.
@@ -256,7 +264,7 @@ def _filter_iter_qcols_on_name(
             [
                 pl.col(f"{colname}_matches").list.drop_nulls().list.len()
                 >= len(query[colname])
-                for colname in iterable_qcols
+                for colname in iterable_qcols_tmp
             ]
         )
         .select(name_column)

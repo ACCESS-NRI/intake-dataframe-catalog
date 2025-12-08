@@ -452,7 +452,6 @@ def test_search_columns_with_iterables(query, require_all, expected):
     if match:
         assert True
     if not match:
-        breakpoint()
         assert (
             False
         ), f"Expected: \n{pd.DataFrame(expected)} \nFound: \n{pd.DataFrame(results)}"

@@ -965,6 +965,7 @@ def test_search_full_catalog(catalog_path):
         "^d[hz]t$",
     ]
 
+    # breakpoint()
     catalog = catalog.search(
         model="ACCESS-OM2.*",
         variable=variable,
