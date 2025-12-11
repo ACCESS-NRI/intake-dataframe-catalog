@@ -946,3 +946,68 @@ def _add_cmip6(cat, source_path):
         )
         cat.add(cmip6, metadata={"realm": realm, "variable": variable})
     return cat
+
+
+def test_search_full_catalog(catalog_path):
+    """
+    Test searching the production catalog, since `test_search_variable_regex_and_exact`
+    doesn't  seem to be working. We can minify later
+    """
+    catalog = intake.open_df_catalog(
+        catalog_path / "metacatalog.parquet",
+    )
+
+    variable = [
+        "tx_trans",
+        "ty_trans",
+        "mld",
+        "area_t",
+        "^d[hz]t$",
+    ]
+
+    catalog = catalog.search(
+        model="ACCESS-OM2.*",
+        variable=variable,
+        require_all=True,
+    )
+
+    snapshot_catalog = intake.open_df_catalog(
+        catalog_path / "search_result.parquet",
+    )
+
+    snapshot_df = snapshot_catalog.df.reset_index(drop=True)
+    catalog_df = catalog.df.reset_index(drop=True)
+
+    iterable_columns = set(snapshot_df.columns).intersection(
+        catalog.columns_with_iterables
+    )
+
+    for col in iterable_columns:
+        snapshot_df[col] = snapshot_df[col].apply(set)
+        catalog_df[col] = catalog_df[col].apply(set)
+
+    # Remove the yaml column - I've snapshotted a parquet catalog (no columns
+    # with_iterables specified needed) against an old CSV one where they are.
+    snapshot_df = snapshot_df.drop(columns=["yaml"], errors="ignore")
+    catalog_df = catalog_df.drop(columns=["yaml"], errors="ignore")
+
+    pd.testing.assert_frame_equal(
+        snapshot_df,
+        catalog_df,
+    )
+
+
+def test_search_cosima_recipes(catalog_path):
+    """
+    Test searching the production catalog, since `test_search_variable_regex_and_exact`
+    doesn't  seem to be working. We can minify later
+    """
+    catalog = intake.open_df_catalog(
+        catalog_path / "metacatalog.parquet",
+    )
+
+    filtered_cat = catalog.search(
+        model="ACCESS-OM2", variable="surface_salt", frequency="1day"
+    )
+
+    assert len(filtered_cat) == 6

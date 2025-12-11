@@ -452,7 +452,6 @@ def test_search_columns_with_iterables(query, require_all, expected):
     if match:
         assert True
     if not match:
-        breakpoint()
         assert (
             False
         ), f"Expected: \n{pd.DataFrame(expected)} \nFound: \n{pd.DataFrame(results)}"
@@ -465,10 +464,18 @@ def test_search_variable_regex_and_exact():
     """
     df = pd.DataFrame(
         {
-            "model": ["ACCESS-OM2-1", "ACCESS-OM2-2", "ACCESS-OM2-3"],
+            "model": ["ACCESS-OM2-1", "ACCESS-OM2-2", "ACCESS-OM2-2", "ACCESS-OM2-3"],
             "variable": [
                 ["tx_trans", "ty_trans", "mld", "area_t", "dht", "dzt"],
                 ["tx_trans", "ty_trans", "mld", "area_t"],  # missing dht/dzt
+                [
+                    "tx_trans",
+                    "ty_trans",
+                    "tx_trans_rho",
+                    "ty_trans_rho",
+                    "area_t",
+                    "dzt",
+                ],  # missing mld
                 [
                     "tx_trans",
                     "ty_trans",
@@ -477,7 +484,7 @@ def test_search_variable_regex_and_exact():
                     "dzt",
                 ],  # missing area_t - but will match twice on "^d[hz]t$",
             ],
-            "experiment": ["exp1", "exp2", "exp3"],
+            "experiment": ["exp1", "exp2", "exp3", "exp4"],
         }
     )
 
