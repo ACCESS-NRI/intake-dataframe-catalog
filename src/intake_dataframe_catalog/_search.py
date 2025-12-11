@@ -119,7 +119,6 @@ def search(
             name_column,
             _agg_cols,
             iterable_qcols_tmp,
-            iterable_qcols,
         )
 
     lf = lf.select(*all_cols)
@@ -163,7 +162,6 @@ def _promote_query_qcols(
     """
     Promote query columns to iterable columns in the lazyframe. Positional-only
     arguments - internal use only.
-
     """
     iterable_qcols = set(query).intersection(all_cols)
 
@@ -229,7 +227,6 @@ def _filter_iter_qcols_on_name(
     query: dict[str, Any],
     name_column: str,
     agg_cols: set[str],
-    iterable_qcols_tmp: set[str],
     iterable_qcols: set[str],
     /,
 ) -> pl.LazyFrame:
@@ -243,28 +240,20 @@ def _filter_iter_qcols_on_name(
     TODO: I think we need to do the counting *before * we* aggregate, otherwise
     we might count matches that are in different rows as being together. Need to test this.
     """
-    group_on_names = not iterable_qcols
 
-    if group_on_names:
-        # if True:
-        # Group by name_column and aggregate the other columns into lists
-        # first in this instance. Essentially the opposite of the previous
-        # group_by("index") operation.
-        namelist_lf = lf.group_by(name_column).agg(
-            [
-                pl.col(col).explode().flatten().unique(maintain_order=True)
-                for col in agg_cols
-            ]
-        )
-    else:
-        namelist_lf = lf
+    namelist_lf = lf.group_by(name_column).agg(
+        [
+            pl.col(col).explode().flatten().unique(maintain_order=True)
+            for col in agg_cols
+        ]
+    )
 
     namelist = (
         namelist_lf.filter(
             [
                 pl.col(f"{colname}_matches").list.drop_nulls().list.len()
                 >= len(query[colname])
-                for colname in iterable_qcols_tmp
+                for colname in iterable_qcols
             ]
         )
         .select(name_column)
