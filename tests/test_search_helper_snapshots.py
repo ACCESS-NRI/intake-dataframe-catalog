@@ -231,7 +231,7 @@ def test__match_and_filter(lf, query, expected_lf, expected_tmp_cols):
 
 
 @pytest.mark.parametrize(
-    "lf, query, name_column, agg_cols, iterable_qcols, group_on_names, expected",
+    "lf, query, name_column, agg_cols, iterable_qcols, expected",
     [
         (
             pl.LazyFrame(
@@ -249,7 +249,6 @@ def test__match_and_filter(lf, query, expected_lf, expected_tmp_cols):
             "A",
             {"B", "D_matches", "D", "E", "C", "B_matches"},
             {"B", "D"},
-            False,
             pl.LazyFrame(
                 {
                     "A": ["cat0", "cat1", "cat1"],
@@ -259,35 +258,6 @@ def test__match_and_filter(lf, query, expected_lf, expected_tmp_cols):
                     "E": [["xxx"], ["xxx"], ["yyy"]],
                     "B_matches": [["a", "b"], ["a", "b"], ["a"]],
                     "D_matches": [[0], [0], [0]],
-                }
-            ),
-        ),
-        (
-            pl.LazyFrame(
-                {
-                    "A": ["cat0", "cat1", "cat1"],
-                    "B": [["a", "b"], ["a", "b"], ["a"]],
-                    "C": [["cx", "cy"], ["cx", "cz"], ["cz", "cy"]],
-                    "D": [[0, 1], [0], [0, 1]],
-                    "E": [["xxx"], ["xxx"], ["yyy"]],
-                    "B_matches": [["a", "b"], ["a", "b"], ["a"]],
-                    "D_matches": [[0, 1], [0], [0, 1]],
-                }
-            ),
-            {"B": ["a", "b"], "D": [0, 1]},
-            "A",
-            {"D_matches", "C", "D", "B_matches", "E", "B"},
-            {"B", "D"},
-            False,
-            pl.LazyFrame(
-                {
-                    "A": ["cat0"],
-                    "B": [["a", "b"]],
-                    "C": [["cx", "cy"]],
-                    "D": [[0, 1]],
-                    "E": [["xxx"]],
-                    "B_matches": [["a", "b"]],
-                    "D_matches": [[0, 1]],
                 }
             ),
         ),
@@ -315,7 +285,6 @@ def test__match_and_filter(lf, query, expected_lf, expected_tmp_cols):
             "name",
             {"realm", "yaml", "realm_matches", "variable"},
             {"realm"},
-            True,
             pl.LazyFrame(
                 {
                     "realm": [["ocnBgchem"], ["atmos"]],
@@ -342,7 +311,6 @@ def test__match_and_filter(lf, query, expected_lf, expected_tmp_cols):
             "name",
             {"variable", "realm", "variable_matches"},
             {"variable"},  # Single column in iterable_qcols
-            False,
             pl.LazyFrame(
                 {
                     "name": ["exp1"],
@@ -367,7 +335,6 @@ def test__match_and_filter(lf, query, expected_lf, expected_tmp_cols):
             "name",
             {"variable", "realm", "variable_matches", "realm_matches"},
             {"variable", "realm"},
-            False,
             pl.LazyFrame(
                 schema={
                     "name": pl.Utf8,
@@ -404,7 +371,6 @@ def test__match_and_filter(lf, query, expected_lf, expected_tmp_cols):
             "name",
             {"variable", "realm", "variable_matches", "realm_matches"},
             {"variable", "realm"},
-            False,
             pl.LazyFrame(
                 schema={
                     "name": pl.Utf8,
@@ -417,21 +383,20 @@ def test__match_and_filter(lf, query, expected_lf, expected_tmp_cols):
         ),
     ],
 )
-@pytest.mark.xfail(reason="Refactoring related changes break the type signature here")
+# @pytest.mark.xfail(reason="Refactoring related changes break the type signature here")
 def test__filter_iter_qcols_on_name(
     lf: pl.LazyFrame,
     query: dict[str, list],
     name_column: str,
     agg_cols: set[str],
     iterable_qcols: set[str],
-    group_on_names: bool,
     expected: pl.LazyFrame,
 ):
     """
     Test our _filter_iter_qcols_on_name function.
     """
     output = _filter_iter_qcols_on_name(
-        lf, query, name_column, agg_cols, iterable_qcols, group_on_names
+        lf, query, name_column, agg_cols, iterable_qcols
     )
     pl_assert_frame_equal(output.collect(), expected.collect(), check_row_order=False)
 
