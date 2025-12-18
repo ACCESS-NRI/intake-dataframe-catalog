@@ -236,9 +236,6 @@ def _filter_iter_qcols_on_name(
     Takes a lazyframe and filters it to only those names that match all
     elements in the query for the specified iterable query columns. Positional
     -only arguments - internal use only.
-
-    TODO: I think we need to do the counting *before * we* aggregate, otherwise
-    we might count matches that are in different rows as being together. Need to test this.
     """
 
     namelist_lf = lf.group_by(name_column).agg(

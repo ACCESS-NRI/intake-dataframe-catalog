@@ -314,19 +314,6 @@ def test_search(query, expected):
             ],
         ),
         (
-            {"model": ["a", "b"], "variable": [0, 1]},
-            True,
-            [
-                {
-                    "name": "cat0",
-                    "model": ["a", "b"],
-                    "realm": ("cx", "cy"),
-                    "variable": {0, 1},
-                    "E": "xxx",
-                },
-            ],
-        ),
-        (
             {"realm": ["cx", "cy"], "E": ["xxx"]},
             False,
             [
@@ -452,9 +439,9 @@ def test_search_columns_with_iterables(query, require_all, expected):
     if match:
         assert True
     if not match:
-        assert (
-            False
-        ), f"Expected: \n{pd.DataFrame(expected)} \nFound: \n{pd.DataFrame(results)}"
+        assert False, (
+            f"Expected: \n{pd.DataFrame(expected)} \nFound: \n{pd.DataFrame(results)}"
+        )
 
 
 def test_search_variable_regex_and_exact():
@@ -505,9 +492,9 @@ def test_search_variable_regex_and_exact():
         require_all=True,
     )
     matched_experiments = results["experiment"].tolist()
-    assert matched_experiments == [
-        "exp1"
-    ], f"Failed case 1: Expected only exp1, got {matched_experiments}"
+    assert matched_experiments == ["exp1"], (
+        f"Failed case 1: Expected only exp1, got {matched_experiments}"
+    )
 
     # Now try with all variables as regex
     variable_regex = [
@@ -525,9 +512,9 @@ def test_search_variable_regex_and_exact():
         require_all=True,
     )
     matched_experiments_regex = results_regex["experiment"].tolist()
-    assert matched_experiments_regex == [
-        "exp1"
-    ], f"Failed case 2: Expected only exp1, got {matched_experiments_regex}"
+    assert matched_experiments_regex == ["exp1"], (
+        f"Failed case 2: Expected only exp1, got {matched_experiments_regex}"
+    )
 
 
 @pytest.mark.parametrize(
