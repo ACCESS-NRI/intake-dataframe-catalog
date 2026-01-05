@@ -948,31 +948,52 @@ def _add_cmip6(cat, source_path):
     return cat
 
 
-def test_search_full_catalog(catalog_path):
+@pytest.mark.parametrize(
+    "snapshot_file, query",
+    [
+        (
+            "snapshot_model_var.parquet",
+            {
+                "model": "ACCESS-OM2.*",
+                "variable": [
+                    "tx_trans",
+                    "ty_trans",
+                    "mld",
+                    "area_t",
+                    "^d[hz]t$",
+                ],
+                "require_all": True,
+            },
+        ),
+        (
+            "snapshot_model_var_freq.parquet",
+            {
+                "model": "ACCESS-OM2.*",
+                "variable": [
+                    "tx_trans",
+                    "ty_trans",
+                    "mld",
+                    "^d[hz]t$",
+                ],
+                "frequency": "1mon",
+                "require_all": True,
+            },
+        ),
+    ],
+)
+def test_search_full_catalog(catalog_path, snapshot_file, query):
     """
-    Test searching the production catalog, since `test_search_variable_regex_and_exact`
-    doesn't  seem to be working. We can minify later
+    These are a couple of snapshot tests out of the full catalog, which compare
+    against the previous (non-polars based) implementation.
     """
     catalog = intake.open_df_catalog(
         catalog_path / "metacatalog.parquet",
     )
 
-    variable = [
-        "tx_trans",
-        "ty_trans",
-        "mld",
-        "area_t",
-        "^d[hz]t$",
-    ]
-
-    catalog = catalog.search(
-        model="ACCESS-OM2.*",
-        variable=variable,
-        require_all=True,
-    )
+    catalog = catalog.search(**query)
 
     snapshot_catalog = intake.open_df_catalog(
-        catalog_path / "search_result.parquet",
+        catalog_path / snapshot_file,
     )
 
     snapshot_df = snapshot_catalog.df.reset_index(drop=True)
@@ -999,8 +1020,7 @@ def test_search_full_catalog(catalog_path):
 
 def test_search_cosima_recipes(catalog_path):
     """
-    Test searching the production catalog, since `test_search_variable_regex_and_exact`
-    doesn't  seem to be working. We can minify later
+    Test against a known example from COSIMA recipe
     """
     catalog = intake.open_df_catalog(
         catalog_path / "metacatalog.parquet",
