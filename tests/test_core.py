@@ -946,3 +946,88 @@ def _add_cmip6(cat, source_path):
         )
         cat.add(cmip6, metadata={"realm": realm, "variable": variable})
     return cat
+
+
+@pytest.mark.parametrize(
+    "snapshot_file, query",
+    [
+        (
+            "snapshot_model_var.parquet",
+            {
+                "model": "ACCESS-OM2.*",
+                "variable": [
+                    "tx_trans",
+                    "ty_trans",
+                    "mld",
+                    "area_t",
+                    "^d[hz]t$",
+                ],
+                "require_all": True,
+            },
+        ),
+        (
+            "snapshot_model_var_freq.parquet",
+            {
+                "model": "ACCESS-OM2.*",
+                "variable": [
+                    "tx_trans",
+                    "ty_trans",
+                    "mld",
+                    "^d[hz]t$",
+                ],
+                "frequency": "1mon",
+                "require_all": True,
+            },
+        ),
+    ],
+)
+def test_search_full_catalog(catalog_path, snapshot_file, query):
+    """
+    These are a couple of snapshot tests out of the full catalog, which compare
+    against the previous (non-polars based) implementation.
+    """
+    catalog = intake.open_df_catalog(
+        catalog_path / "metacatalog.parquet",
+    )
+
+    catalog = catalog.search(**query)
+
+    snapshot_catalog = intake.open_df_catalog(
+        catalog_path / snapshot_file,
+    )
+
+    snapshot_df = snapshot_catalog.df.reset_index(drop=True)
+    catalog_df = catalog.df.reset_index(drop=True)
+
+    iterable_columns = set(snapshot_df.columns).intersection(
+        catalog.columns_with_iterables
+    )
+
+    for col in iterable_columns:
+        snapshot_df[col] = snapshot_df[col].apply(set)
+        catalog_df[col] = catalog_df[col].apply(set)
+
+    # Remove the yaml column - I've snapshotted a parquet catalog (no columns
+    # with_iterables specified needed) against an old CSV one where they are.
+    snapshot_df = snapshot_df.drop(columns=["yaml"], errors="ignore")
+    catalog_df = catalog_df.drop(columns=["yaml"], errors="ignore")
+
+    pd.testing.assert_frame_equal(
+        snapshot_df,
+        catalog_df,
+    )
+
+
+def test_search_cosima_recipes(catalog_path):
+    """
+    Test against a known example from COSIMA recipe
+    """
+    catalog = intake.open_df_catalog(
+        catalog_path / "metacatalog.parquet",
+    )
+
+    filtered_cat = catalog.search(
+        model="ACCESS-OM2", variable="surface_salt", frequency="1day"
+    )
+
+    assert len(filtered_cat) == 6
