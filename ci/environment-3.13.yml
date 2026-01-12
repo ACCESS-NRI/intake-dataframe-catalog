@@ -6,14 +6,15 @@ dependencies:
   - black
   - intake>=0.7
   - intake-esm
+  - ipython
   - itables
   - polars>=1.12
   - pytest
   - pip
   - pip:
-    - build
-    - ruff
-    - codecov
-    - pre-commit
-    - pytest-cov
-    - twine
+      - build
+      - ruff
+      - codecov
+      - pre-commit
+      - pytest-cov
+      - twine
