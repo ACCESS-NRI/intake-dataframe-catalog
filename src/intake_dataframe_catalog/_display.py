@@ -49,10 +49,10 @@ class _DisplayOptions:
     def display_type(self) -> _DisplayType:
         try:
             # Check for Jupyter Notebook
-            ipy = get_ipython()
+            ipy = get_ipython()  # type: ignore[name-defined]
             if hasattr(ipy, "kernel"):
                 return _DisplayType.JUPYTER_NOTEBOOK
-            elif hasattr(ipy, "config"):
+            else:
                 return _DisplayType.IPYTHON_REPL
         except NameError:
             return _DisplayType.REGULAR_REPL
